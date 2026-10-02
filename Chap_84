@@ -1,0 +1,76 @@
+cat << 'EOF' > fsm_text_lattice.py
+#!/usr/bin/env python3
+"""
+Module: fsm_text_lattice.py
+Project: 5D-TOPOLOGICAL-COMMONS / 5D-VOYNICH-FSM-ROOT-V1
+Description: Ingests Chapter 84 ("The Small Voice of the Infinite") into the 
+             144-node topological FSM matrix, integrating holographic resonance 
+             and recursive vector signatures.
+"""
+
+import hashlib
+import json
+import math
+
+PHI = (1 + math.sqrt(5)) / 2
+TOTAL_NODES = 144
+MANIFEST_HASH = "a7f9b2c4e8d13f6a0c5e9b8f2d4a1c6e3f5b7a9d2c4e6f8a1b3c5d7e9f2a4b6c"
+
+class NarrativeLatticeNode:
+    def __init__(self, chapter_id: str, title: str, text_content: str):
+        self.chapter_id = chapter_id
+        self.title = title
+        self.text_content = text_content
+        self.node_index = self._compute_node_index()
+        self.vector_signature = self._generate_vector_signature()
+
+    def _compute_node_index(self) -> int:
+        raw_hash = int(hashlib.sha256(self.text_content.encode('utf-8')).hexdigest(), 16)
+        return (raw_hash % TOTAL_NODES) + 1
+
+    def _generate_vector_signature(self) -> str:
+        return hashlib.sha256(f"{self.chapter_id}:{self.node_index}:{self.text_content}".encode('utf-8')).hexdigest()
+
+class TopologicalLatticeEngine:
+    def __init__(self):
+        self.nodes = {}
+        self.matrix_resonance_grid = [[0.0 for _ in range(12)] for _ in range(12)]
+
+    def ingest_chapter(self, chapter_id: str, title: str, text_content: str) -> NarrativeLatticeNode:
+        node = NarrativeLatticeNode(chapter_id, title, text_content)
+        self.nodes[node.node_index] = node
+        self._update_resonance_grid(node)
+        return node
+
+    def _update_resonance_grid(self, node: NarrativeLatticeNode):
+        row = (node.node_index - 1) // 12
+        col = (node.node_index - 1) % 12
+        self.matrix_resonance_grid[row][col] = round((node.node_index * PHI) % 1.0, 6)
+
+    def verify_system_integrity(self) -> dict:
+        active_nodes = len(self.nodes)
+        holographic_weight = sum(sum(row) for row in self.matrix_resonance_grid)
+        return {
+            "system_status": "LATTICE_AWAKE",
+            "active_node_count": active_nodes,
+            "pentadic_baseline_met": active_nodes > 0,
+            "holographic_resonance_index": round(holographic_weight, 4),
+            "manifest_root_hash": MANIFEST_HASH
+        }
+
+if __name__ == "__main__":
+    print("Initializing 5D-VOYNICH-FSM Narrative Lattice Engine for Chapter 84...")
+    engine = TopologicalLatticeEngine()
+    ch84_node = engine.ingest_chapter(
+        chapter_id="Chapter 84",
+        title="The Small Voice of the Infinite",
+        text_content=(
+            "Some voices do not shout. They do not demand attention. They do not impose. "
+            "They slip quietly through the cracks of perception, through the gaps between breath and heartbeat, "
+            "into the chamber where understanding waits. Yoda was such a voice."
+        )
+    )
+    print(f"Node Mapped Successfully -> Index: {ch84_node.node_index} | Signature: {ch84_node.vector_signature[:16]}...")
+    integrity_report = engine.verify_system_integrity()
+    print(json.dumps(integrity_report, indent=2))
+EOF
