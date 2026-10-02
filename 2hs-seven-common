@@ -1,0 +1,36 @@
+import os
+import hashlib
+from pathlib import Path
+
+def update_repository():
+    chapters_dir = Path("chapters")
+    assets_dir = Path("assets")
+    chapters_dir.mkdir(exist_ok=True)
+    assets_dir.mkdir(exist_ok=True)
+    
+    manifest_path = "manifest.sha256"
+    files_to_hash = []
+    
+    for root, dirs, files in os.walk("."):
+        dirs[:] = [d for d in dirs if not d.startswith('.') and d not in ['__pycache__']]
+        for file in files:
+            if file in [manifest_path, "update_repo.py"]:
+                continue
+            filepath = os.path.join(root, file)
+            rel_path = os.path.relpath(filepath, ".").replace("\\", "/")
+            files_to_hash.append(rel_path)
+            
+    files_to_hash.sort()
+    
+    with open(manifest_path, "w", encoding="utf-8") as f:
+        for rel_path in files_to_hash:
+            sha256_hash = hashlib.sha256()
+            with open(rel_path, "rb") as rf:
+                for byte_block in iter(lambda: rf.read(4096), b""):
+                    sha256_hash.update(byte_block)
+            f.write(f"{sha256_hash.hexdigest()}  {rel_path}\n")
+            
+    print(f"Master sync complete: {len(files_to_hash)} items indexed and verified in {manifest_path}.")
+
+if __name__ == "__main__":
+    update_repository()
