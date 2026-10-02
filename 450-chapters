@@ -1,0 +1,35 @@
+import os
+import re
+
+def run_bundler():
+    input_dir = "."  # Set to current directory or your chapters folder
+    output_file = "master_450_manuscript.md"
+    
+    files = [f for f in os.listdir(input_dir) if f.startswith("chapter") and f.endswith(".txt")]
+    
+    if not files:
+        print("No chapter text files found in the directory.")
+        return
+
+    def natural_sort_key(s):
+        return [int(text) if text.isdigit() else text.lower() for text in re.split(r'(\d+)', s)]
+    
+    files.sort(key=natural_sort_key)
+
+    print(f"Compiling {len(files)} chapters into {output_file}...")
+
+    with open(output_file, "w", encoding="utf-8") as outfile:
+        outfile.write("# 450-Chapter Narrative Archive\n\n---\n\n")
+        
+        for filename in files:
+            chapter_title = os.path.splitext(filename)[0].replace("_", " ").title()
+            outfile.write(f"\n\n## {chapter_title}\n\n")
+            
+            with open(filename, "r", encoding="utf-8") as infile:
+                outfile.write(infile.read())
+                outfile.write("\n\n---\n")
+
+    print("Compilation complete.")
+
+if __name__ == "__main__":
+    run_bundler()
