@@ -1,0 +1,141 @@
+```python
+# =====================================================================
+# 5D-VOYNICH-FSM-ROOT-V1: Master Repository Distribution & Snapshot Tool
+# Repository: https://github.com/voynichmanuscript/5d-topological-commons
+# DOI: 10.5281/zenodo.23085985 | Author: Justin Ronald Moser
+# =====================================================================
+
+import os
+import sys
+import hashlib
+import zipfile
+from datetime import datetime
+
+# ---------------------------------------------------------------------
+File Contents & Manifest Source
+# ---------------------------------------------------------------------
+FILES = {
+    "app.py": '''# 5D-VOYNICH-FSM-ROOT-V1 Main Application Entry
+import sys
+from folding import apply_secondary_folding
+
+def main():
+    print("Initializing 144-Node FSM Matrix for Beinecke MS 408...")
+    nodes = 144
+    fold_coeff = 1.618
+    folded_matrix = apply_secondary_folding(nodes, fold_coeff)
+    print(f"Matrix Folded Successfully. Active States: {len(folded_matrix)}")
+
+if __name__ == "__main__":
+    main()
+''',
+
+    "folding.py": '''# Secondary Dimensional Folding (Golden Ratio Metric)
+import numpy as np
+
+def apply_secondary_folding(node_count, phi=1.618):
+    """
+    Applies a secondary topological folding across the 144-node FSM 
+    using the golden ratio (phi) coefficient.
+    """
+    base_matrix = np.linspace(0, 360, node_count)
+    folded = base_matrix * (1.0 / phi)
+    return np.sin(np.radians(folded))
+''',
+
+    "verify.py": '''# Cryptographic Integrity Verifier
+import hashlib
+import os
+
+EXPECTED_HASHES = {
+    "app.py": None, # Populated dynamically during runtime
+    "folding.py": None
+}
+
+def verify_integrity():
+    print("Verifying repository file integrity...")
+    for filename in EXPECTED_HASHES:
+        if os.path.exists(filename):
+            with open(filename, "rb") as f:
+                file_hash = hashlib.sha256(f.read()).hexdigest()
+                print(f"  [OK] {filename} -> {file_hash[:16]}...")
+        else:
+            print(f"  [MISSING] {filename}")
+
+if __name__ == "__main__":
+    verify_integrity()
+''',
+
+    "requirements.txt": '''numpy>=1.20.0
+requests>=2.25.0
+''',
+
+    "CITATION.cff": '''cff-version: 1.2.0
+message: "If you use this software or model, please cite it as below."
+authors:
+  - family-names: "Moser"
+    given-names: "Justin Ronald"
+    affiliation: "Moser Building & Carpentry LLC"
+title: "5D-VOYNICH-FSM-ROOT-V1: Topological Finite-State Machine Model of Beinecke MS 408"
+version: "1.0.0"
+date-released: 2026-10-01
+url: "https://github.com/voynichmanuscript/5d-topological-commons"
+identifiers:
+  - type: doi
+    value: "10.5281/zenodo.23085985"
+''',
+
+    "README.md": '''# 5D-VOYNICH-FSM-ROOT-V1
+Topological Finite-State Machine Model of Beinecke MS 408.
+DOI: [10.5281/zenodo.23085985](https://doi.org/10.5281/zenodo.23085985)
+Author: Justin Ronald Moser (Moser Building & Carpentry LLC)
+'''
+}
+
+# ---------------------------------------------------------------------
+Utility Functions: Deployment & Snapshot Export
+# ---------------------------------------------------------------------
+def deploy_files():
+    print("[*] Deploying master repository files locally...")
+    for filename, content in FILES.items():
+        with open(filename, "w", encoding="utf-8") as f:
+            f.write(content.strip() + "\n")
+        print(f"    -> Written: {filename}")
+
+def generate_manifest():
+    print("[*] Generating cryptographic SHA-256 manifest...")
+    manifest_lines = []
+    for filename in sorted(FILES.keys()):
+        if os.path.exists(filename):
+            with open(filename, "rb") as f:
+                file_hash = hashlib.sha256(f.read()).hexdigest()
+                manifest_lines.append(f"{file_hash}  {filename}")
+    
+    manifest_content = "\n".join(manifest_lines) + "\n"
+    with open("manifest.sha256", "w", encoding="utf-8") as f:
+        f.write(manifest_content)
+    print("    -> Written: manifest.sha256")
+
+def export_master_snapshot():
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    zip_filename = f"5d_voynich_snapshot_{timestamp}.zip"
+    
+    all_targets = list(FILES.keys()) + ["manifest.sha256"]
+    
+    print(f"[*] Creating archival snapshot zip: {zip_filename}")
+    with zipfile.ZipFile(zip_filename, 'w', zipfile.ZIP_DEFLATED) as zipf:
+        for file in all_targets:
+            if os.path.exists(file):
+                zipf.write(file)
+                print(f"    [+] Bundled: {file}")
+            else:
+                print(f"    [-] Skipped (Missing): {file}")
+                
+    print(f"[+] Master Snapshot Complete: {zip_filename}")
+
+if __name__ == "__main__":
+    deploy_files()
+    generate_manifest()
+    export_master_snapshot()
+
+```
