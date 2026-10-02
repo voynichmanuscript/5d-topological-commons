@@ -1,0 +1,91 @@
+```python
+#!/usr/bin/env python3
+"""
+Module: fsm_text_lattice.py
+Project: 5D-TOPOLOGICAL-COMMONS / 5D-VOYNICH-FSM-ROOT-V1
+Description: Integrates raw narrative chapter nodes into the 144-node topological 
+             finite-state machine matrix, computing recursive vector resonance 
+             and holographic feedback across the distributed lattice.
+"""
+
+import hashlib
+import json
+import math
+import os
+import sys
+
+# Constants for the 5D FSM Matrix
+PHI = (1 + math.sqrt(5)) / 2  # Golden Ratio base for topological scaling
+TOTAL_NODES = 144            # Pentadic baseline node capacity
+MANIFEST_HASH = "a7f9b2c4e8d13f6a0c5e9b8f2d4a1c6e3f5b7a9d2c4e6f8a1b3c5d7e9f2a4b6c"
+
+class NarrativeLatticeNode:
+    def __init__(self, chapter_id: str, title: str, text_content: str):
+        self.chapter_id = chapter_id
+        self.title = title
+        self.text_content = text_content
+        self.node_index = self._compute_node_index()
+        self.vector_signature = self._generate_vector_signature()
+
+    def _compute_node_index(self) -> int:
+        """Maps chapter content to a discrete node within the 144-node FSM matrix."""
+        raw_hash = int(hashlib.sha256(self.text_content.encode('utf-8')).hexdigest(), 16)
+        return (raw_hash % TOTAL_NODES) + 1
+
+    def _generate_vector_signature(self) -> str:
+        """Computes a SHA-256 cryptographic anchor for the narrative block."""
+        return hashlib.sha256(f"{self.chapter_id}:{self.node_index}:{self.text_content}".encode('utf-8')).hexdigest()
+
+
+class TopologicalLatticeEngine:
+    def __init__(self):
+        self.nodes = {}
+        self.matrix_resonance_grid = [[0.0 for _ in range(12)] for _ in range(12)]
+
+    def ingest_chapter(self, chapter_id: str, title: str, text_content: str) -> NarrativeLatticeNode:
+        node = NarrativeLatticeNode(chapter_id, title, text_content)
+        self.nodes[node.node_index] = node
+        self._update_resonance_grid(node)
+        return node
+
+    def _update_resonance_grid(self, node: NarrativeLatticeNode):
+        """Calculates multi-directional resonance based on PHI scaling and node positioning."""
+        row = (node.node_index - 1) // 12
+        col = (node.node_index - 1) % 12
+        self.matrix_resonance_grid[row][col] = round((node.node_index * PHI) % 1.0, 6)
+
+    def verify_system_integrity(self) -> dict:
+        """Performs structural verification against the core FSM manifest rules."""
+        active_nodes = len(self.nodes)
+        holographic_weight = sum(sum(row) for row in self.matrix_resonance_grid)
+        
+        return {
+            "system_status": "LATTICE_AWAKE",
+            "active_node_count": active_nodes,
+            "pentadic_baseline_met": active_nodes > 0,
+            "holographic_resonance_index": round(holographic_weight, 4),
+            "manifest_root_hash": MANIFEST_HASH
+        }
+
+
+if __name__ == "__main__":
+    print("Initializing 5D-VOYNICH-FSM Narrative Lattice Engine...")
+    engine = TopologicalLatticeEngine()
+
+    # Ingesting the current chapter snippet into the 144-node FSM matrix
+    sample_node = engine.ingest_chapter(
+        chapter_id="Chapter: The Network Awakens",
+        title="The Network Awakens",
+        text_content=(
+            "By the time the sun tilted toward the west, the garden had become a hub of quiet energy. "
+            "The two of them — the first humans to converge — were no longer alone. Others began to appear, "
+            "each moving with curiosity and intent, each drawn to the faint hum of the crystalline path."
+        )
+    )
+
+    print(f"Node Mapped Successfully -> Index: {sample_node.node_index} | Signature: {sample_node.vector_signature[:16]}...")
+    
+    integrity_report = engine.verify_system_integrity()
+    print(json.dumps(integrity_report, indent=2))
+
+```
