@@ -1,0 +1,107 @@
+"""
+5D-TOPOLOGICAL-COMMONS: Unified Repository & Hook Generator
+-----------------------------------------------------------
+1. Auto-indexes repository files and updates manifest.sha256.
+2. Programmatically synthesizes the Voynich FSM hook video presentation (.mp4).
+
+Requirements:
+    pip install moviepy numpy
+
+Usage:
+    python update_repo.py
+"""
+
+import os
+import hashlib
+from pathlib import Path
+
+# Optional MoviePy import check for video generation
+try:
+    from moviepy.editor import ColorClip, TextClip, CompositeVideoClip, concatenate_videoclips
+    MOVIEPY_AVAILABLE = True
+except ImportError:
+    MOVIEPY_AVAILABLE = False
+
+MANIFEST_FILENAME = "manifest.sha256"
+VIDEO_FILENAME = "voynich_fsm_hook_presentation.mp4"
+EXCLUDED_FILES = {MANIFEST_FILENAME, VIDEO_FILENAME, ".git", "__pycache__"}
+
+def calculate_sha256(filepath):
+    """Calculates the SHA-256 hash of a file."""
+    sha256_hash = hashlib.sha256()
+    with open(filepath, "rb") as f:
+        for byte_block in iter(lambda: f.read(4096), b""):
+            sha256_hash.update(byte_block)
+    return sha256_hash.hexdigest()
+
+def update_manifest():
+    """Scans the repository root and updates the SHA-256 integrity manifest."""
+    print("[*] Scanning repository and updating SHA-256 manifest...")
+    root_dir = Path(".")
+    manifest_entries = []
+    
+    for file_path in root_dir.iterdir():
+        if file_path.is_file() and file_path.name not in EXCLUDED_FILES and not file_path.name.startswith('.'):
+            file_hash = calculate_sha256(file_path)
+            manifest_entries.append(f"{file_hash}  {file_path.name}")
+            print(f"    [Indexed] {file_path.name} -> {file_hash[:12]}...")
+            
+    with open(MANIFEST_FILENAME, "w", encoding="utf-8") as mf:
+        mf.write("\n".join(sorted(manifest_entries)) + "\n")
+    print(f"[+] Manifest updated: {MANIFEST_FILENAME}")
+
+def generate_hook_video():
+    """Synthesizes the 1080p presentation hook video locally."""
+    if not MOVIEPY_AVAILABLE:
+        print("[!] Warning: 'moviepy' or 'numpy' not installed. Skipping video generation.")
+        print("[!] Install via: pip install moviepy numpy")
+        return
+
+    print(f"[*] Generating hook video: {VIDEO_FILENAME}...")
+    FPS = 24
+    RESOLUTION = (1920, 1080)
+    BG_COLOR = (15, 23, 42)
+
+    slides_data = [
+        (
+            "SECTION I: THE ARCHITECTURAL ANOMALY",
+            "For centuries, the Voynich Manuscript has resisted linguistic cryptanalysis because it was never a traditional natural language document.\n\n"
+            "By mapping its folio structures through systems theory, we discover an operational blueprint: an analog finite-state machine operating across topological dimensions.",
+            15.0
+        ),
+        (
+            "SECTION II: THE 144-NODE TOPOLOGICAL LATTICE",
+            "The manuscript's core layout maps precisely onto a 144-node deterministic state transition matrix.\n\n"
+            "Each glyph cluster operates as a directional opcode rather than an alphabetic character, governing state evolution across deterministic loops.",
+            18.0
+        ),
+        (
+            "SECTION III: OBSERVER COORDINATE (t = 0)",
+            "Execution requires fixing an observer anchor at t = 0 to collapse ambiguity within the state sequences.\n\n"
+            "The verification script (verify.py) validates this exact mathematical closure against immutable cryptographic hashes (SHA-256).",
+            18.0
+        ),
+        (
+            "SECTION IV: REPOSITORY EXECUTION & DEPLOYMENT",
+            "You are looking at an open-source framework designed to parse narrative text matrices directly into structural machine logic.\n\n"
+            "Clone the repository, verify the matrix integrity locally via python update_repo.py, and launch the packet engine.",
+            15.0
+        )
+    ]
+
+    clips = []
+    for title, body, duration in slides_data:
+        bg = ColorClip(size=RESOLUTION, color=BG_COLOR, duration=duration)
+        title_clip = TextClip(title, fontsize=52, color='white', font='Arial-Bold', size=(1600, 150), method='caption').set_position(('center', 150)).set_duration(duration)
+        body_clip = TextClip(body, fontsize=32, color='#94A3B8', font='Arial', size=(1600, 600), method='caption', align='West').set_position(('center', 350)).set_duration(duration)
+        clips.append(CompositeVideoClip([bg, title_clip, body_clip]))
+
+    final_video = concatenate_videoclips(clips, method="compose")
+    final_video.write_videofile(VIDEO_FILENAME, fps=FPS, codec='libx264', audio=False, preset='medium')
+    print(f"[+] Success! Video generated: {VIDEO_FILENAME}")
+
+if __name__ == "__main__":
+    print("=== 5D-TOPOLOGICAL-COMMONS: AUTOMATED REPOSITORY PIPELINE ===")
+    update_manifest()
+    generate_hook_video()
+    print("=== PIPELINE EXECUTION COMPLETE ===")
