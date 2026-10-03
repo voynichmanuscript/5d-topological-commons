@@ -1,0 +1,12 @@
+import base64
+
+# Replace 'encoded_file.txt' with the file containing the encoded payload
+with open("encoded_file.txt", "r") as f:
+    encoded_data = f.read()
+
+# Decode the payload back into binary/media data
+decoded_bytes = base64.b64decode(encoded_data)
+
+# Save the decoded output (e.g., as a video or extracted file)
+with open("output_media.mp4", "wb") as f:
+    f.write(decoded_bytes)
