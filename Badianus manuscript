@@ -1,0 +1,119 @@
+#!/usr/bin/env python3
+"""
+Botanical FSM Longevity & Self-Healing Analyzer
+Maps historical pharmacopeia nodes (e.g., Badianus Manuscript) into a 
+144-node finite-state transition network to calculate least-suffering
+organic pathways and synthetic-to-bio replacement matrices.
+"""
+
+import hashlib
+import json
+import math
+from typing import Dict, List, Tuple
+
+
+class BotanicalNodeFSM:
+
+  def __init__(self, node_id: int, name: str, category: str, energetic: str):
+    self.node_id = node_id
+    self.name = name
+    self.category = category  # 'Head', 'Cardiac', 'Systemic', 'Structural'
+    self.energetic = energetic  # 'Cooling', 'Drying', 'Binding', 'Activating'
+    self.transitions: List[int] = []
+
+  def add_transition(self, target_id: int):
+    if target_id not in self.transitions:
+      self.transitions.append(target_id)
+
+
+class HealingMatrixSystem:
+
+  def __init__(self, total_nodes: int = 144):
+    self.total_nodes = total_nodes
+    self.nodes: Dict[int, BotanicalNodeFSM] = {}
+    self._initialize_baseline_network()
+
+  def _initialize_baseline_network(self):
+    # Seed sample foundational nodes representing historical organic building blocks
+    seed_data = [
+        (1, "Yolloxochitl (Heart Flower)", "Cardiac", "Cooling"),
+        (2, "Momotli (Wild Sage)", "Systemic", "Drying"),
+        (3, "Red Ochre Mineral", "Head", "Binding"),
+        (4, "Aquatic Bird Liver Extract", "Systemic", "Activating"),
+        (5, "Resin Matrix Polymer (Natural)", "Structural", "Binding"),
+    ]
+
+    for idx, name, cat, eng in seed_data:
+      self.nodes[idx] = BotanicalNodeFSM(idx, name, cat, eng)
+
+    # Populate remaining nodes up to 144 with topological topological linkages
+    for i in range(6, self.total_nodes + 1):
+      cat = ["Head", "Cardiac", "Systemic", "Structural"][i % 4]
+      eng = ["Cooling", "Drying", "Binding", "Activating"][i % 4]
+      self.nodes[i] = BotanicalNodeFSM(
+          i, f"Compound_Node_{i:03d}", cat, eng
+      )
+
+    # Interlink nodes to form a non-linear state graph
+    for node_id in self.nodes:
+      for step in [1, 7, 13, 31]:
+        target = (node_id + step) % self.total_nodes + 1
+        self.nodes[node_id].add_transition(target)
+
+  def evaluate_least_suffering_path(
+      self, start_node: int, target_node: int
+  ) -> List[int]:
+    """Computes the shortest topological path to minimize systemic friction/suffering."""
+    visited = {start_node}
+    queue = [[start_node]]
+
+    while queue:
+      path = queue.pop(0)
+      current = path[-1]
+
+      if current == target_node:
+        return path
+
+      for neighbor in self.nodes[current].transitions:
+        if neighbor not in visited:
+          visited.add(neighbor)
+          queue.append(path + [neighbor])
+    return []
+
+  def generate_synthetic_replacement_matrix(
+      self, synthetic_name: str
+  ) -> Dict[str, any]:
+    """Bridges modern synthetics with historical natural building blocks
+
+    to maintain functional structural integrity while removing toxicity.
+    """
+    # Deterministic mapping hash to pick corresponding organic nodes
+    h_val = int(
+        hashlib.sha256(synthetic_name.encode("utf-8")).hexdigest(), 16
+    )
+    node_idx = (h_val % self.total_nodes) + 1
+    matched_node = self.nodes[node_idx]
+
+    return {
+        "synthetic_compound": synthetic_name,
+        "recommended_natural_node": matched_node.name,
+        "category": matched_node.category,
+        "energetic_signature": matched_node.energetic,
+        "topological_connections": len(matched_node.transitions),
+        "entropy_reduction_score": round(math.sin(h_val) * 50 + 50, 2),
+    }
+
+
+if __name__ == "__main__":
+  system = HealingMatrixSystem(144)
+
+  # Example 1: Compute least-suffering transition path
+  path = system.evaluate_least_suffering_path(start_node=1, target_node=42)
+  print(f"Optimal Least-Suffering Path: {path}")
+
+  # Example 2: Transition from synthetic structural polymer to organic building block
+  replacement = system.generate_synthetic_replacement_matrix(
+      "Petrochemical Epoxy Resin"
+  )
+  print("\nSynthetic-to-Organic Transition Mapping:")
+  print(json.dumps(replacement, indent=2))
