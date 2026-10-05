@@ -1,0 +1,112 @@
+class Panel:
+    def __init__(self, panel_id, panel_type, is_solar=False):
+        self.panel_id = panel_id
+        self.panel_type = panel_type  # 'clear', 'reflective', 'smart_black', 'stone_look'
+        self.is_solar = is_solar
+        self.moisture_stable = True
+        self.anti_fracture_rated = True
+        self.state = "Clear" if panel_type == "smart_black" else panel_type
+
+    def toggle_smart_glass(self):
+        if self.panel_type == "smart_black":
+            self.state = "Black" if self.state == "Clear" else "Clear"
+            print(f"Panel {self.panel_id} transitioned to state: {self.state}")
+
+
+class AttachmentSite:
+    def __init__(self, site_id, coordinates):
+        self.site_id = site_id
+        self.coordinates = coordinates
+        self.occupied = False
+        self.connected_module = None
+
+    def plug_in(self, module_name):
+        self.occupied = True
+        self.connected_module = module_name
+        print(f"Attachment Site {self.site_id} successfully plugged in: {module_name}")
+
+
+class ConduitChamber:
+    def __init__(self, chamber_type):
+        self.chamber_type = chamber_type  # 'plumbing' or 'electrical'
+        self.active_links = []
+
+    def link_service(self, target_id):
+        self.active_links.append(target_id)
+        print(f"Linked {self.chamber_type} conduit to target {target_id}")
+
+
+class BubbleStructure:
+    def __init__(self, name, scale_tier, style_name):
+        self.name = name
+        self.scale_tier = scale_tier  # e.g., 'Doghouse', 'Residential', 'Skyscraper'
+        self.style_name = style_name
+        self.panels = []
+        self.attachment_sites = []
+        self.conduits = {'plumbing': ConduitChamber('plumbing'), 'electrical': ConduitChamber('electrical')}
+        self.gravity_settling_stable = True
+
+    def add_panel(self, panel: Panel):
+        self.panels.append(panel)
+
+    def add_attachment_site(self, site: AttachmentSite):
+        self.attachment_sites.append(site)
+
+    def validate_gravity_settling(self):
+        # Simulates structural weight distribution and offset asymmetry safety checks
+        if self.scale_tier == "Skyscraper" and not self.gravity_settling_stable:
+            return "Warning: Requires enhanced bedrock anchoring."
+        return "Gravity-settling equilibrium confirmed. Anti-fracture parameters optimal."
+
+
+class BubbleHomeDesignCenter:
+    def __init__(self):
+        self.styles = [
+            "Geode Monolith",
+            "Solar Crystal",
+            "Mirrored Mirage",
+            "Aura Hub",
+            "Asymmetric Cascade"
+        ]
+        self.active_builds = []
+
+    def create_build(self, name, scale_tier, style_index):
+        if style_index < 0 or style_index >= len(self.styles):
+            raise ValueError("Invalid style selection.")
+        
+        chosen_style = self.styles[style_index]
+        new_structure = BubbleStructure(name, scale_tier, chosen_style)
+        
+        # Default infrastructure provisioning
+        new_structure.add_attachment_site(AttachmentSite("Node-Alpha", (0, 0, 1)))
+        new_structure.add_attachment_site(AttachmentSite("Node-Beta", (1, 1, 2)))
+        
+        self.active_builds.append(new_structure)
+        print(f"Initialized '{name}' ({scale_tier}) using style: {chosen_style}")
+        return new_structure
+
+
+# --- Demonstration Execution ---
+if __name__ == "__main__":
+    center = BubbleHomeDesignCenter()
+
+    # 1. Build a custom smart pod structure using style #1 (Solar Crystal)
+    my_pod = center.create_build("Eco-Dome Alpha", scale_tier="Residential", style_index=1)
+
+    # 2. Add polymer panels (Clear, Reflective, Smart-Black, and Solar-integrated)
+    panel_1 = Panel("P-001", "clear")
+    panel_2 = Panel("P-002", "smart_black")
+    panel_3 = Panel("P-003", "stone_look", is_solar=True)
+    
+    my_pod.add_panel(panel_1)
+    my_pod.add_panel(panel_2)
+    my_pod.add_panel(panel_3)
+
+    # 3. Test smart polymer transition
+    panel_2.toggle_smart_glass()
+
+    # 4. Plug in a new modular expansion via attachment sites
+    my_pod.attachment_sites[0].plug_in("Greenhouse Bubble Extension")
+
+    # 5. Run structural gravity check
+    print(my_pod.validate_gravity_settling())
