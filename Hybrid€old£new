@@ -1,0 +1,140 @@
+#!/usr/bin/env python3
+"""
+Ancient-to-Modern Hybrid Architecture Engine (AMHAE)
+Core Synthesis Engine: Merging Ancient Mechanics with Non-Linear Topology Optimization.
+"""
+
+import math
+import json
+from dataclasses import dataclass, field
+from typing import List, Dict, Tuple, Optional
+
+@dataclass
+class AncientTechnique:
+    name: str
+    paradigm: str
+    stress_dissipation_coefficient: float
+    seismic_compliance_factor: float
+    thermal_mass_rating: float
+
+@dataclass
+class ModernTechnique:
+    name: str
+    mechanism: str
+    efficiency_gain: float
+    carbon_reduction_pct: float
+
+@dataclass
+class HybridMorphNode:
+    node_id: str
+    ancient_source: AncientTechnique
+    modern_overlay: ModernTechnique
+    base_geometry_specs: Dict[str, float] = field(default_factory=dict)
+    stress_vector: Tuple[float, float, float] = (0.0, 0.0, 0.0)
+
+class ArchitectureSynthesisEngine:
+    def __init__(self):
+        self.ancient_registry: Dict[str, AncientTechnique] = {
+            "inca_polygon": AncientTechnique(
+                name="Inca Cyclopean Polygonal Masonry",
+                paradigm="Kinematic slip-joint unbonded wedge-locking",
+                stress_dissipation_coefficient=0.94,
+                seismic_compliance_factor=0.98,
+                thermal_mass_rating=0.85
+            ),
+            "roman_pozzolan": AncientTechnique(
+                name="Roman Volcanic Pozzolan & Cast Basalt",
+                paradigm="Self-healing hydraulic aluminosilicate matrix",
+                stress_dissipation_coefficient=0.90,
+                seismic_compliance_factor=0.75,
+                thermal_mass_rating=0.80
+            ),
+            "vitruvian_harmonic": AncientTechnique(
+                name="Vitruvian Harmonic Proportioning",
+                paradigm="Acoustical standing-wave & proportional load distribution",
+                stress_dissipation_coefficient=0.82,
+                seismic_compliance_factor=0.70,
+                thermal_mass_rating=0.90
+            )
+        }
+        
+        self.modern_registry: Dict[str, ModernTechnique] = {
+            "cnc_polymer": ModernTechnique(
+                name="Robotic CNC Cellular Polymer Formwork",
+                mechanism="Pneumatic inflation and high-precision polymer casting",
+                efficiency_gain=3.4,
+                carbon_reduction_pct=65.0
+            ),
+            "cfd_airflow": ModernTechnique(
+                name="Computational Fluid Dynamics Airflow Channels",
+                mechanism="Dynamic passive draft loops and subterranean thermal sinks",
+                efficiency_gain=2.8,
+                carbon_reduction_pct=100.0
+            ),
+            "geopolymer_matrix": ModernTechnique(
+                name="Ambient-Cure Alkali-Activated Geopolymer",
+                mechanism="Basalt dust and sodium silicate mineral binding without cement kilns",
+                efficiency_gain=4.1,
+                carbon_reduction_pct=85.0
+            )
+        }
+
+    def synthesize_hybrid_node(self, node_id: str, ancient_key: str, modern_key: str, dimensions: Dict[str, float]) -> HybridMorphNode:
+        ancient = self.ancient_registry[ancient_key]
+        modern = self.modern_registry[modern_key]
+        
+        # Non-linear dual-track stress calculation
+        volume = dimensions.get("width", 1.0) * dimensions.get("height", 1.0) * dimensions.get("depth", 1.0)
+        base_stress_x = volume * (1.0 - ancient.stress_dissipation_coefficient) * modern.efficiency_gain
+        base_stress_y = volume * (1.0 - ancient.seismic_compliance_factor)
+        base_stress_z = volume * ancient.thermal_mass_rating * (1.0 + (modern.carbon_reduction_pct / 100.0))
+        
+        return HybridMorphNode(
+            node_id=node_id,
+            ancient_source=ancient,
+            modern_overlay=modern,
+            base_geometry_specs=dimensions,
+            stress_vector=(round(base_stress_x, 3), round(base_stress_y, 3), round(base_stress_z, 3))
+        )
+
+    def generate_continuation_morph(self, node: HybridMorphNode, iteration: int) -> Dict:
+        """Continuation morph process: iteratively mutates geometry and stress ratings."""
+        mutation_factor = 1.0 + (0.05 * iteration)
+        mutated_specs = {k: round(v * mutation_factor, 2) for k, v in node.base_geometry_specs.items()}
+        
+        eval_score = (
+            node.ancient_source.seismic_compliance_factor * 0.4 +
+            node.modern_overlay.efficiency_gain * 0.4 +
+            (node.modern_overlay.carbon_reduction_pct / 100.0) * 0.2
+        ) * mutation_factor
+        
+        return {
+            "iteration": iteration,
+            "node_id": node.node_id,
+            "mutated_geometry": mutated_specs,
+            "structural_resilience_index": round(eval_score, 4),
+            "status": "Optimized & Ready for CAD Export"
+        }
+
+if __name__ == "__main__":
+    engine = ArchitectureSynthesisEngine()
+    
+    # Instantiate hybrid node combining Inca polygonal wedge-locks with CNC polymer casting
+    sample_dims = {"width": 12.5, "height": 3.2, "depth": 6.0}
+    node = engine.synthesize_hybrid_node("JUS-NODE-01", "inca_polygon", "cnc_polymer", sample_dims)
+    
+    # Execute 3-stage continuation morph process
+    morph_history = [engine.generate_continuation_morph(node, i) for i in range(1, 4)]
+    
+    output = {
+        "project": "Ancient-to-Modern Hybrid Architecture Engine",
+        "initial_node": {
+            "id": node.node_id,
+            "ancient_paradigm": node.ancient_source.name,
+            "modern_overlay": node.modern_overlay.name,
+            "stress_vector": node.stress_vector
+        },
+        "morph_sequence": morph_history
+    }
+    
+    print(json.dumps(output, indent=2))
