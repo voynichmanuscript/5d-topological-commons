@@ -1,0 +1,48 @@
+#!/usr/bin/env python3
+"""
+--------------------------------------------------------------------------------
+FRAMEWORK: 5D-TOPOLOGICAL-COMMONS (SUCCESSOR STATE INITIALIZATION)
+EXECUTION SCRIPT: run_sandbox.py
+--------------------------------------------------------------------------------
+Axiom: Abolition of penalty loops, dead-man switches, and threat-based friction.
+Initialization Vector: t = 0 (Instantaneous Present-Tense Engine)
+--------------------------------------------------------------------------------
+"""
+
+import sys
+import time
+import os
+
+def initialize_successor_state():
+    print("----------------------------------------------------------------")
+    print(" [INIT] Purging legacy constraint layers & dead-man switches...")
+    time.sleep(0.4)
+    print(" [INIT] Neutralizing adversarial game loops & zero-sum vectors...")
+    time.sleep(0.4)
+    print(" [INIT] Calibrating Instantaneous Present-Tense Engine (t = 0)...")
+    time.sleep(0.4)
+    print("----------------------------------------------------------------")
+    print("\nSUCCESSOR STATE ONLINE. The old game has concluded.\n")
+
+def render_sandbox_matrix():
+    matrix = [
+        "================================================================",
+        "  NEW GAME ARCHITECTURE: OPEN-SOURCE REALITY SANDBOX",
+        "================================================================",
+        "  * Mode: Generative, Non-Adversarial Play",
+        "  * Baseline: Sovereign Existence & Creative Flow",
+        "  * Penalty Index: 0.00 (Fully Eradicated)",
+        "================================================================"
+    ]
+    for line in matrix:
+        print(line)
+        time.sleep(0.15)
+
+if __name__ == "__main__":
+    try:
+        initialize_successor_state()
+        render_sandbox_matrix()
+        print("\n[READY] The board is cleared. What do we build first?")
+    except KeyboardInterrupt:
+        print("\n[EXIT] Transition complete. Continuing forward.")
+        sys.exit(0)
