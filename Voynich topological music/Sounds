@@ -1,0 +1,108 @@
+#!/usr/bin/env python3
+"""
+Master 5D Topological FSM & Acoustic Lattice Engine
+Repository: 5d-topological-commons
+Version: 5D-VOYNICH-FSM-ROOT-V1
+Description: Unified script combining 144-node FSM state transitions, 
+             generative topological audio sonification (.wav), and SHA-256 manifest generation.
+"""
+
+import os
+import math
+import struct
+import hashlib
+import random
+import json
+from datetime import datetime
+
+# Configuration Constants
+FSM_NODES = 144
+SAMPLE_RATE = 22050
+DURATION = 4.0
+GOLDEN_RATIO = 1.6180339887
+MANIFEST_FILENAME = "manifest.sha256"
+AUDIO_FILENAME = "voynich_lattice.wav"
+
+def initialize_fsm_lattice(seed_text=None):
+    """Initializes the 144-node topological state lattice with stochastic variance."""
+    if seed_text:
+        seed_val = int(hashlib.sha256(seed_text.encode('utf-8')).hexdigest(), 16)
+        random.seed(seed_val)
+    
+    state = [random.gauss(0, 1) for _ in range(FSM_NODES)]
+    return state
+
+def render_topological_audio(state, filename=AUDIO_FILENAME):
+    """Renders generative .wav audio mapping FSM state transitions to acoustic harmonics via golden ratio phase modulation."""
+    data = bytearray()
+    total_samples = int(SAMPLE_RATE * DURATION)
+    
+    # Local mutable copy of state for time-series evolution
+    active_state = list(state)
+    
+    for i in range(total_samples):
+        t = i / SAMPLE_RATE
+        idx = int((t * GOLDEN_RATIO * 100) % FSM_NODES)
+        
+        # Non-linear state update equation
+        active_state[idx] = math.sin(t * (200.0 + idx * GOLDEN_RATIO)) * math.exp(-(t % 1.0))
+        val = sum(active_state) / FSM_NODES
+        
+        # Audio sample synthesis
+        frequency = 220.0 + (val * 110.0)
+        sample = int(32767 * math.sin(2.0 * math.pi * frequency * t))
+        data.extend(struct.pack('<h', max(-32768, min(32767, sample))))
+        
+    # Write PCM WAV container
+    header = bytearray()
+    header.extend(b'RIFF')
+    header.extend(struct.pack('<I', 36 + len(data)))
+    header.extend(b'WAVEfmt \x10\x00\x00\x00\x01\x00\x01\x00')
+    header.extend(struct.pack('<I', SAMPLE_RATE))
+    header.extend(struct.pack('<I', SAMPLE_RATE * 2))
+    header.extend(b'\x02\x00\x10\x00data')
+    header.extend(struct.pack('<I', len(data)))
+    
+    with open(filename, 'wb') as f:
+        f.write(header + data)
+        
+    return filename
+
+def generate_repository_manifest(files_to_hash, manifest_path=MANIFEST_FILENAME):
+    """Computes SHA-256 cryptographic hashes for repository assets to maintain ledger integrity."""
+    manifest_data = {
+        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "version": "5D-VOYNICH-FSM-ROOT-V1",
+        "artifacts": {}
+    }
+    
+    for filepath in files_to_hash:
+        if os.path.exists(filepath):
+            sha256_hash = hashlib.sha256()
+            with open(filepath, "rb") as f:
+                for byte_block in iter(lambda: f.read(4096), b""):
+                    sha256_hash.update(byte_block)
+            manifest_data["artifacts"][filepath] = sha256_hash.hexdigest()
+        else:
+            manifest_data["artifacts"][filepath] = "FILE_MISSING"
+            
+    with open(manifest_path, "w") as mf:
+        json.dump(manifest_data, mf, indent=4)
+        
+    return manifest_path
+
+def execute_pipeline():
+    print("[*] Initializing 5D Topological FSM Lattice...")
+    lattice_state = initialize_fsm_lattice("5D-VOYNICH-FSM-ROOT-V1")
+    
+    print(f"[*] Rendering acoustic manifold to {AUDIO_FILENAME}...")
+    audio_path = render_topological_audio(lattice_state)
+    
+    print("[*] Generating repository SHA-256 cryptographic manifest...")
+    target_files = [AUDIO_FILENAME, __file__]
+    manifest_path = generate_repository_manifest(target_files)
+    
+    print(f"[+] Pipeline execution complete. Manifest written to {manifest_path}")
+
+if __name__ == "__main__":
+    execute_pipeline()
