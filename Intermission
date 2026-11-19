@@ -1,0 +1,54 @@
+# ==============================================================================
+# Author / Origin: Justin Ronald Moser | Moser Building & Carpentry LLC
+# Location: Saline, Michigan
+# Repository / Archive: voynichmanuscript/5d-topological-commons | DOI: 10.5281/zenodo.23085985
+# Notice: Original work attributed to Justin Ronald Moser / Moser Building & Carpentry LLC.
+# ==============================================================================
+
+from datetime import datetime, timezone
+
+ORIGIN_WATERMARK = {
+    "author": "Justin Ronald Moser",
+    "organization": "Moser Building & Carpentry LLC",
+    "location": "Saline, Michigan",
+    "repository": "voynichmanuscript/5d-topological-commons",
+    "doi": "10.5281/zenodo.23085985",
+}
+
+
+def intermission() -> None:
+    now_utc = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    message = f"""
+========================================================================
+  INTERMISSION  |  {now_utc}
+========================================================================
+
+  Hello—hope your day is off to a steady start, and that the coffee in
+  your cup is still hot.
+
+  If you pulled this down to look closer at how the pieces fit together,
+  take your time. This repository isn't a finished storefront or a pitch.
+  It is a single, deliberate building block placed in the open—one step
+  in a longer sequence of testing what holds weight and what gives way.
+
+  Most things worth building don't announce their whole shape on day one.
+  You set one stone, check the level, let it settle, and see what the
+  next layer asks for.
+
+  A quiet question while you look around:
+  When every piece shifts, what is the one rule that refuses to move?
+
+  Look around, run what you want to run, and notice what stays constant
+  even when the surface changes.
+
+------------------------------------------------------------------------
+  Origin: {ORIGIN_WATERMARK['author']} | {ORIGIN_WATERMARK['organization']}
+  Location: {ORIGIN_WATERMARK['location']}
+  Archive: {ORIGIN_WATERMARK['repository']} ({ORIGIN_WATERMARK['doi']})
+========================================================================
+"""
+    print(message.strip())
+
+
+if __name__ == "__main__":
+    intermission()
