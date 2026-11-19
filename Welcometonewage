@@ -1,0 +1,96 @@
+import time
+import random
+
+class KnowledgeMonolith:
+    """
+    A system management class for the Knowledge Monolith City (Image 5),
+    handling energy, agriculture, data integration, and research.
+    """
+    def __init__(self):
+        self.operational = False
+        self.energy_core_output = 0.0  # Percentage
+        self.atmospheric_water_level = 0.0  # Liters
+        self.biomass_index = 0.0  # Arbitrary health scale
+        self.active_projects = []
+        self.knowledge_nodes = {}
+
+    def initialize_system(self):
+        """Simulates the sequential activation from Image 1 -> 5."""
+        print("--- GENESIS MONOLITH: INITIALIZATION SEQUENCE ---")
+        time.sleep(1)
+        print("1. Lattice structure stabilizing...")
+        time.sleep(1)
+        print("2. Fractal code patterns integrating...")
+        time.sleep(1)
+        print("3. System resources (H2O, Energy) coming online...")
+        time.sleep(1)
+        self.energy_core_output = 95.5
+        self.atmospheric_water_level = 125000.0
+        self.biomass_index = 85.0
+        self.operational = True
+        self.knowledge_nodes["CORE_INTEGRATION"] = "Active"
+        print("--- KNOWLEDGE MONOLITH: FULLY OPERATIONAL ---")
+
+    def manage_resources(self):
+        """Monitors and optimizes resource distribution across the terraced city."""
+        if not self.operational:
+            return "System Offline."
+        
+        # Simulate minor fluctuations
+        energy_fluctuation = random.uniform(-0.5, 0.5)
+        water_fluctuation = random.uniform(-100.0, 100.0)
+        
+        self.energy_core_output = max(90.0, min(100.0, self.energy_core_output + energy_fluctuation))
+        self.atmospheric_water_level += water_fluctuation
+        
+        return f"Resource Status: E_Output={self.energy_core_output:.1f}%, H2O={self.atmospheric_water_level:.1f}L"
+
+    def add_research_project(self, project_name, metadata_uri):
+        """Integrates new real-world or theory ideas (e.g., Voynich, Minelab)."""
+        project = {
+            "id": len(self.active_projects),
+            "name": project_name,
+            "metadata": metadata_uri,
+            "timestamp": time.time()
+        }
+        self.active_projects.append(project)
+        # Simulate connecting the project to the knowledge graph
+        self.knowledge_nodes[project_name] = "Linked"
+        print(f"New research project integrated: {project_name}")
+
+    def report_city_status(self):
+        """Provides a summary of the city-scale system."""
+        print("\n--- Knowledge Monolith City Status Report ---")
+        print(f"System State: {'ONLINE' if self.operational else 'OFFLINE'}")
+        print(self.manage_resources())
+        print(f"Biomass Health Index: {self.biomass_index:.1f}/100.0")
+        print(f"Active Research Projects: {len(self.active_projects)}")
+        for proj in self.active_projects:
+            print(f" - {proj['name']} (Linked at: {time.ctime(proj['timestamp'])})")
+        print("----------------------------------------------\n")
+
+# --- EXECUTION ---
+if __name__ == "__main__":
+    # Create the system instance
+    city_system = KnowledgeMonolith()
+    
+    # Step 1: Initialization (based on Image 1 concept, realized in Image 5)
+    city_system.initialize_system()
+    
+    # Step 2: Manage initial resources (Image 3/4 scale)
+    print(city_system.manage_resources())
+    
+    # Step 3: Integrate real-world ideas and theory (Image 5 reinforcement)
+    city_system.add_research_project("Project Genesis Monolith", "data://genesis_lattice_v5")
+    city_system.add_research_project("Voynich Manuscript Topological Commons", "github://voynichmanuscript/5d-commons")
+    city_system.add_research_project("Minelab Geo-Relics Integration", "minelab://equinox_800_data")
+    city_system.add_research_project("Moser Building & Carpentry Synthesis", "local://woodshop_and_metalworks")
+
+    # Step 4: Ongoing monitoring (the steady state of Image 5)
+    # Simulate a few cycles of system management
+    for _ in range(3):
+        time.sleep(1)
+        city_system.manage_resources()
+        
+    # Final Status Report
+    city_system.report_city_status()
