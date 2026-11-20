@@ -1,0 +1,301 @@
+"""
+================================================================================
+THEORETICAL FRAMEWORK: TOPOLOGICAL POLARITY & SELECTIVE CRYSTALLIZATION
+Author: Justin Ronald Moser (Justin R. Moser / J. Moser)
+Repository: voynichmanuscript/5d-topological-commons
+Module: topological_polarity_crystallization.py
+Version: 1.0.0 (Standard Library Only - Zero External Dependencies)
+
+DESCRIPTION:
+Formalizes a coupled dynamical and topological model describing:
+  1. Local binary spark (0/1) attraction and sensitive dependence (butterfly
+     perturbation) initiating motion across a state manifold.
+  2. Nested containment where an active 1-state core circulates inside a
+     surrounding 0-state domain, generating a kinetic friction pool of shear,
+     resistance, and emergent pattern formation.
+  3. Zero-state agency and selective preference: a pruning operator that
+     evaluates candidate eddies/drafts, diverting unfavored trials into a
+     hidden scrap archive while retaining coherent forms.
+  4. Crystallization into a stabilized 1-state living architecture accompanied
+     by relaxation/quieting of the surrounding 0-state field.
+
+USAGE:
+  python topological_polarity_crystallization.py
+
+OUTPUTS:
+  Prints a structured formal summary, stage-by-stage state telemetry, and a
+  compact ASCII manifold diagnostic to stdout.
+================================================================================
+"""
+
+from __future__ import annotations
+
+import math
+from dataclasses import dataclass, field
+from typing import Dict, List, Tuple
+
+WATERMARK_AUTHOR: str = "Justin Ronald Moser"
+WATERMARK_SHORT: str = "J. Moser"
+REPOSITORY_ID: str = "voynichmanuscript/5d-topological-commons"
+
+
+@dataclass
+class CandidateForm:
+    """Represents a transient or emergent structural draft inside the pool."""
+
+    form_id: int
+    coherence: float
+    friction_work: float
+    stability: float
+    accepted: bool = False
+    reason: str = ""
+
+
+@dataclass
+class ManifoldState:
+    """Tracks coupled 0-state (latent/enclosing) and 1-state (active/formed) variables."""
+
+    step: int = 0
+    zero_field_potential: float = 1.0
+    zero_agency_preference: float = 0.62
+    one_core_energy: float = 0.15
+    nested_containment_ratio: float = 0.20
+    friction_pool_intensity: float = 0.0
+    crystallized_structure: float = 0.0
+    scrap_archive_mass: float = 0.0
+    retained_forms: List[CandidateForm] = field(default_factory=list)
+    scrap_pile: List[CandidateForm] = field(default_factory=list)
+
+
+class TopologicalPolarityTheory:
+    """
+    Formal dynamical model of binary spark -> nested 1-in-0 friction pool ->
+    selective agency/scrap pruning -> stabilized 1-state crystallization.
+    """
+
+    def __init__(
+        self,
+        spark_amplitude: float = 0.08,
+        butterfly_gain: float = 1.35,
+        friction_viscosity: float = 0.72,
+        selection_threshold: float = 0.54,
+        relaxation_rate: float = 0.18,
+    ) -> None:
+        self.spark_amplitude = spark_amplitude
+        self.butterfly_gain = butterfly_gain
+        self.friction_viscosity = friction_viscosity
+        self.selection_threshold = selection_threshold
+        self.relaxation_rate = relaxation_rate
+
+    def _generate_candidate(self, step: int, friction: float, one_e: float, zero_p: float) -> CandidateForm:
+        """Synthesizes a deterministic candidate structure from current pool dynamics."""
+        phase = step * 0.6180339887498949
+        raw_wave = 0.5 + 0.5 * math.sin(phase * 3.141592653589793 + friction * 2.2)
+        coherence = max(0.0, min(1.0, 0.45 * raw_wave + 0.35 * one_e + 0.20 * zero_p))
+        friction_work = max(0.0, friction * (0.4 + 0.6 * math.cos(phase * 2.0) ** 2))
+        stability = max(0.0, min(1.0, coherence * (1.0 - 0.25 * abs(friction - 0.5))))
+        return CandidateForm(
+            form_id=step,
+            coherence=coherence,
+            friction_work=friction_work,
+            stability=stability,
+        )
+
+    def step_dynamics(self, state: ManifoldState) -> ManifoldState:
+        """Advances the coupled 0-state / 1-state system by one discrete cycle."""
+        next_step = state.step + 1
+
+        # Stage 1 & 2: Local spark + butterfly amplification inside nested 1-within-0 coupling
+        spark_delta = self.spark_amplitude * math.sin(next_step * 0.75)
+        butterfly_perturbation = self.butterfly_gain * abs(spark_delta) * (1.0 - state.crystallized_structure * 0.5)
+
+        # Containment increases as 1-state energy couples into the enclosing 0-state domain
+        containment = max(
+            0.05,
+            min(
+                0.98,
+                state.nested_containment_ratio
+                + 0.06 * math.tanh(state.one_core_energy - state.zero_field_potential * 0.4),
+            ),
+        )
+
+        # Kinetic friction pool driven by relative shear between active 1-core and 0-domain
+        shear = abs(state.one_core_energy + butterfly_perturbation - state.zero_field_potential * 0.5)
+        friction_pool = max(
+            0.0,
+            min(1.0, self.friction_viscosity * shear * (0.5 + 0.5 * containment)),
+        )
+
+        # Stage 3: Zero-state agency evaluates candidate form -> accept into form or archive as scrap
+        candidate = self._generate_candidate(
+            step=next_step,
+            friction=friction_pool,
+            one_e=state.one_core_energy,
+            zero_p=state.zero_field_potential,
+        )
+        preference_score = (
+            0.55 * candidate.coherence
+            + 0.30 * candidate.stability
+            + 0.15 * state.zero_agency_preference
+        )
+
+        crystallized = state.crystallized_structure
+        scrap_mass = state.scrap_archive_mass
+        retained = list(state.retained_forms)
+        scrap = list(state.scrap_pile)
+
+        if preference_score >= self.selection_threshold and friction_pool > 0.08:
+            candidate.accepted = True
+            candidate.reason = f"Selected by 0-state preference ({preference_score:.3f} >= {self.selection_threshold:.3f})"
+            retained.append(candidate)
+            crystallized = min(1.0, crystallized + 0.085 * candidate.stability * (0.4 + friction_pool))
+        else:
+            candidate.accepted = False
+            candidate.reason = f"Pruned to unseen scrap archive ({preference_score:.3f} < {self.selection_threshold:.3f})"
+            scrap.append(candidate)
+            scrap_mass += 0.06 + 0.05 * candidate.friction_work
+
+        # Stage 4: Crystallization locks coherent 1-structure while quieting 0-field turbulence
+        damping = 1.0 - self.relaxation_rate * crystallized
+        one_energy = max(
+            0.05,
+            min(
+                1.0,
+                state.one_core_energy * (0.88 + 0.08 * damping)
+                + spark_delta
+                + 0.05 * friction_pool
+                - 0.03 * crystallized,
+            ),
+        )
+        zero_potential = max(
+            0.10,
+            min(
+                1.2,
+                state.zero_field_potential * (0.94 + 0.04 * damping)
+                - 0.025 * crystallized
+                + 0.015 * math.cos(next_step * 0.5),
+            ),
+        )
+        # 0-state agency sharpens preference as structure crystallizes
+        agency_pref = max(
+            0.40,
+            min(0.95, state.zero_agency_preference + 0.025 * crystallized - 0.008 * scrap_mass * 0.1),
+        )
+
+        return ManifoldState(
+            step=next_step,
+            zero_field_potential=zero_potential,
+            zero_agency_preference=agency_pref,
+            one_core_energy=one_energy,
+            nested_containment_ratio=containment,
+            friction_pool_intensity=friction_pool,
+            crystallized_structure=crystallized,
+            scrap_archive_mass=scrap_mass,
+            retained_forms=retained,
+            scrap_pile=scrap,
+        )
+
+    def simulate(self, steps: int = 16) -> List[ManifoldState]:
+        """Runs a complete multi-stage trajectory from initial spark to settled form."""
+        if steps < 1:
+            raise ValueError("steps must be a positive integer")
+        history: List[ManifoldState] = [ManifoldState(step=0, friction_pool_intensity=0.12)]
+        current = history[0]
+        for _ in range(steps):
+            current = self.step_dynamics(current)
+            history.append(current)
+        return history
+
+
+def formal_axioms() -> List[Tuple[str, str]]:
+    """Returns core propositions of the theory as (Axiom ID, Statement) pairs."""
+    return [
+        (
+            "AX-01 (Polarity & Spark)",
+            "Asymmetric interaction between 0 and 1 initiates local motion and sensitive "
+            "perturbation (butterfly divergence) prior to enduring structural order.",
+        ),
+        (
+            "AX-02 (Nested Containment)",
+            "In the topological regime, a 1-state active core operates inside a surrounding "
+            "0-state domain rather than merely opposing it externally.",
+        ),
+        (
+            "AX-03 (Kinetic Friction Pool)",
+            "Relative motion, containment boundary shear, and resistance inside the 1-within-0 "
+            "coupling form a circulating friction pool that converts raw energy into pattern.",
+        ),
+        (
+            "AX-04 (Agency & Scrap Archive)",
+            "The 0-state exhibits selective preference and pruning agency, diverting unfavored "
+            "trials into an unshown scrap archive while allowing coherent forms to advance.",
+        ),
+        (
+            "AX-05 (Crystallization & Quiet)",
+            "Selected structures stabilize into a coherent 1-state form as surplus agitation "
+            "damps down, leaving a quieter 0-state ground.",
+        ),
+    ]
+
+
+def render_ascii_trajectory(history: List[ManifoldState]) -> str:
+    """Renders a compact ASCII bar diagnostic of friction pool vs. crystallized form."""
+    lines: List[str] = [
+        "Step | Friction Pool (1-in-0) | Crystallized 1-Form | Scrap Mass",
+        "-----+------------------------+---------------------+-----------",
+    ]
+    for st in history:
+        f_len = int(round(st.friction_pool_intensity * 16))
+        c_len = int(round(st.crystallized_structure * 16))
+        f_bar = "#" * f_len + "." * (16 - f_len)
+        c_bar = "=" * c_len + "." * (16 - c_len)
+        lines.append(
+            f"{st.step:4d} | [{f_bar}] {st.friction_pool_intensity:4.2f} | "
+            f"[{c_bar}] {st.crystallized_structure:4.2f} | {st.scrap_archive_mass:9.2f}"
+        )
+    return "\n".join(lines)
+
+
+def run_report() -> Dict[str, object]:
+    """Executes the simulation and returns structured diagnostic metrics."""
+    model = TopologicalPolarityTheory()
+    history = model.simulate(steps=16)
+    final_state = history[-1]
+    return {
+        "watermark": WATERMARK_AUTHOR,
+        "repository": REPOSITORY_ID,
+        "axioms": formal_axioms(),
+        "history": history,
+        "final_state": final_state,
+        "accepted_count": len(final_state.retained_forms),
+        "scrap_count": len(final_state.scrap_pile),
+    }
+
+
+def main() -> None:
+    report = run_report()
+    print(f"Watermark: {report['watermark']} ({WATERMARK_SHORT}) | Repo: {report['repository']}")
+    print("=" * 80)
+    print("FORMAL AXIOMS")
+    print("=" * 80)
+    for axiom_id, statement in report["axioms"]:  # type: ignore[misc]
+        print(f"- {axiom_id}: {statement}")
+    print("\n" + "=" * 80)
+    print("TRAJECTORY DIAGNOSTIC")
+    print("=" * 80)
+    print(render_ascii_trajectory(report["history"]))  # type: ignore[arg-type]
+    final: ManifoldState = report["final_state"]  # type: ignore[assignment]
+    print("-" * 80)
+    print(
+        f"Summary @ step {final.step}: "
+        f"0-Field={final.zero_field_potential:.3f}, "
+        f"1-Core={final.one_core_energy:.3f}, "
+        f"Containment={final.nested_containment_ratio:.3f}, "
+        f"Crystallized={final.crystallized_structure:.3f}, "
+        f"Retained={report['accepted_count']}, "
+        f"Scrap={report['scrap_count']}"
+    )
+
+
+if __name__ == "__main__":
+    main()
