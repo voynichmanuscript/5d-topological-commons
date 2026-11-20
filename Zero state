@@ -1,0 +1,435 @@
+"""Zero-State Consolidation & Living Architecture Simulation (v4).
+
+A single-file, zero-dependency Python simulation modeling the conceptual
+framework developed across our conversation:
+
+1. Two-Layer State Architecture:
+   - `0 State` (Foundational Engine): Unmeasured boundary/slope layer that
+     coaxes trajectories gently without forcing every bounce, retains pattern
+     lineage, and re-seeds non-identical configurations upon completion.
+   - `1 State` (Living Architecture & Field 1): Self-sustaining material and
+     experiential domain featuring root polarity (deep subterranean anchoring/
+     decay coupling + upward growth/projection), autonomous unit momentum,
+     and a shared organic redistribution hub (`Field 1`).
+
+2. "One and Done" Local Consolidation & Macro Convergence:
+   - Individual units ("marbles" / pattern carriers) complete local cycles via
+     momentum threshold or cycle step limits, consolidate into `0 State`, and
+     re-seed with a fresh, non-identical seed.
+   - Periodic macro-consolidation checkpoints fold active states together and
+     re-seed the ensemble into a new configuration space.
+
+3. Epistemic Grounding:
+   - This script models conceptual/speculative dynamics for computational
+     exploration and creative/systems inquiry. It does not claim empirical
+     physical law.
+
+Usage:
+    python zero_state_living_architecture_v4.py
+    python zero_state_living_architecture_v4.py --ticks 15 --units 6 --interval-ms 0
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import math
+import random
+import statistics
+import time
+from dataclasses import asdict, dataclass, field
+from typing import Literal
+
+StageName = Literal[
+    "root_descent",
+    "upward_growth",
+    "hub_comingling",
+    "reintegration",
+]
+
+VALID_STAGES: tuple[StageName, ...] = (
+    "root_descent",
+    "upward_growth",
+    "hub_comingling",
+    "reintegration",
+)
+
+
+@dataclass
+class PatternUnit:
+    """Autonomous unit ("marble" / configuration carrier) operating in 1 State."""
+
+    unit_id: int
+    momentum: float
+    pattern_seed: int
+    root_depth: float = 0.20
+    canopy_reach: float = 0.20
+    lineage_depth: int = 0
+    steps_in_cycle: int = 0
+    history: list[StageName] = field(default_factory=list)
+
+    def __post_init__(self) -> None:
+        if self.unit_id < 1:
+            raise ValueError("unit_id must be >= 1")
+        if not (0.0 <= self.momentum <= 1.0):
+            raise ValueError("momentum must be in [0.0, 1.0]")
+        if self.pattern_seed < 0:
+            raise ValueError("pattern_seed must be >= 0")
+        if not (0.0 <= self.root_depth <= 1.0):
+            raise ValueError("root_depth must be in [0.0, 1.0]")
+        if not (0.0 <= self.canopy_reach <= 1.0):
+            raise ValueError("canopy_reach must be in [0.0, 1.0]")
+        if self.lineage_depth < 0:
+            raise ValueError("lineage_depth must be >= 0")
+        if self.steps_in_cycle < 0:
+            raise ValueError("steps_in_cycle must be >= 0")
+
+
+@dataclass
+class TickSnapshot:
+    """Telemetry recorded at the end of each simulation tick."""
+
+    tick: int
+    elapsed_seconds: float
+    mean_momentum: float
+    mean_root_depth: float
+    mean_canopy_reach: float
+    hub_pool_size: int
+    local_consolidations: int
+    macro_collapse_triggered: bool
+
+
+@dataclass
+class SimulationConfig:
+    """Parameters governing the 0 State / 1 State / Field 1 simulation."""
+
+    num_units: int = 5
+    ticks: int = 12
+    interval_ms: int = 0
+    coax_slope: float = 0.05
+    consolidation_momentum_threshold: float = 0.90
+    max_cycle_steps: int = 4
+    macro_collapse_every_n_consolidations: int = 6
+    seed: int | None = 42
+    output_json: str | None = "simulation_report.json"
+
+    def __post_init__(self) -> None:
+        if self.num_units < 1:
+            raise ValueError("num_units must be >= 1")
+        if self.ticks < 1:
+            raise ValueError("ticks must be >= 1")
+        if self.interval_ms < 0:
+            raise ValueError("interval_ms must be >= 0")
+        if not (-0.5 <= self.coax_slope <= 0.5):
+            raise ValueError("coax_slope must be in [-0.5, 0.5]")
+        if not (0.1 <= self.consolidation_momentum_threshold <= 1.0):
+            raise ValueError(
+                "consolidation_momentum_threshold must be in [0.1, 1.0]"
+            )
+        if self.max_cycle_steps < 1:
+            raise ValueError("max_cycle_steps must be >= 1")
+        if self.macro_collapse_every_n_consolidations < 1:
+            raise ValueError(
+                "macro_collapse_every_n_consolidations must be >= 1"
+            )
+
+
+class ZeroStateEngine:
+    """Foundational engine: light coaxing slope and non-identical pattern re-seeding."""
+
+    def __init__(self, coax_slope: float, rng: random.Random) -> None:
+        self.coax_slope = coax_slope
+        self.rng = rng
+        self.total_reconfigurations: int = 0
+
+    def apply_light_coax(self, unit: PatternUnit, tick: int) -> None:
+        """Apply a subtle, bounded coax while preserving unit autonomy and drift."""
+        gentle_wave = 0.015 * math.sin(tick * 0.65 + unit.unit_id * 1.1)
+        autonomous_drift = self.rng.uniform(-0.06, 0.06)
+        updated = unit.momentum + self.coax_slope + gentle_wave + autonomous_drift
+        unit.momentum = max(0.05, min(1.0, round(updated, 4)))
+
+    def reseed_pattern(self, previous_seed: int, unit_id: int) -> int:
+        """Generate a new, non-identical seed while preserving lineage continuity."""
+        self.total_reconfigurations += 1
+        jitter = self.rng.randint(1, 997)
+        candidate = (
+            previous_seed * 131
+            + unit_id * 977
+            + self.total_reconfigurations * 313
+            + jitter
+        ) % 100_000
+        if candidate == previous_seed:
+            candidate = (candidate + 1) % 100_000
+        return candidate
+
+
+class FieldOneHub:
+    """Living architecture & organic redistribution hub in 1 State."""
+
+    def __init__(self, rng: random.Random) -> None:
+        self.rng = rng
+        self.redistributed_pool: list[int] = []
+
+    def advance_unit(self, unit: PatternUnit) -> StageName:
+        """Advance a unit through root/canopy/hub dynamics and log to shared pool."""
+        stage: StageName = self.rng.choice(VALID_STAGES)
+        unit.steps_in_cycle += 1
+        unit.history.append(stage)
+        self.redistributed_pool.append(unit.pattern_seed)
+
+        if stage == "root_descent":
+            unit.root_depth = min(1.0, round(unit.root_depth + 0.12, 4))
+            unit.canopy_reach = min(1.0, round(unit.canopy_reach + 0.04, 4))
+            unit.momentum = max(0.05, round(unit.momentum - 0.02, 4))
+        elif stage == "upward_growth":
+            anchor_bonus = 0.05 * unit.root_depth
+            unit.canopy_reach = min(
+                1.0, round(unit.canopy_reach + 0.14 + anchor_bonus, 4)
+            )
+            unit.momentum = min(1.0, round(unit.momentum + 0.05, 4))
+        elif stage == "hub_comingling":
+            if self.redistributed_pool:
+                sampled_seed = self.rng.choice(self.redistributed_pool)
+                unit.pattern_seed = (
+                    (unit.pattern_seed + sampled_seed) * 17 + 7
+                ) % 100_000
+            unit.momentum = max(
+                0.05,
+                min(1.0, round(unit.momentum + self.rng.uniform(-0.03, 0.04), 4)),
+            )
+        elif stage == "reintegration":
+            balanced = round((unit.root_depth + unit.canopy_reach) / 2.0, 4)
+            unit.root_depth = balanced
+            unit.canopy_reach = balanced
+
+        return stage
+
+
+class LivingArchitectureSimulation:
+    """Coordinates simulation ticks, 'one and done' consolidations, and reports."""
+
+    def __init__(self, config: SimulationConfig) -> None:
+        self.config = config
+        self.rng = random.Random(config.seed)
+        self.zero_state = ZeroStateEngine(config.coax_slope, self.rng)
+        self.field_one = FieldOneHub(self.rng)
+        self.units: list[PatternUnit] = [
+            PatternUnit(
+                unit_id=idx,
+                momentum=round(self.rng.uniform(0.30, 0.72), 4),
+                pattern_seed=(idx * 1009 + 17) % 100_000,
+                root_depth=round(self.rng.uniform(0.15, 0.40), 4),
+                canopy_reach=round(self.rng.uniform(0.15, 0.40), 4),
+            )
+            for idx in range(1, config.num_units + 1)
+        ]
+        self.snapshots: list[TickSnapshot] = []
+        self.total_local_consolidations: int = 0
+        self.macro_collapses: int = 0
+
+    def _consolidate_unit(self, unit: PatternUnit) -> tuple[int, int]:
+        """Execute '1 and done' local consolidation and re-seed a new pattern."""
+        old_seed = unit.pattern_seed
+        new_seed = self.zero_state.reseed_pattern(old_seed, unit.unit_id)
+        unit.pattern_seed = new_seed
+        unit.lineage_depth += 1
+        unit.steps_in_cycle = 0
+        unit.history.clear()
+        unit.momentum = round(self.rng.uniform(0.25, 0.60), 4)
+        unit.root_depth = round(max(0.10, unit.root_depth * 0.5), 4)
+        unit.canopy_reach = round(max(0.10, unit.canopy_reach * 0.5), 4)
+        self.total_local_consolidations += 1
+        return old_seed, new_seed
+
+    def _trigger_macro_collapse(self) -> None:
+        """Fold active units into a macro-consolidation reset and re-seed all units."""
+        self.macro_collapses += 1
+        for unit in self.units:
+            unit.pattern_seed = self.zero_state.reseed_pattern(
+                unit.pattern_seed, unit.unit_id
+            )
+            unit.lineage_depth += 1
+            unit.steps_in_cycle = 0
+            unit.history.clear()
+            unit.momentum = round(self.rng.uniform(0.30, 0.65), 4)
+            unit.root_depth = 0.20
+            unit.canopy_reach = 0.20
+
+    def run(self, verbose: bool = True) -> dict[str, object]:
+        """Run the simulation across all ticks and return a structured summary."""
+        start_perf = time.perf_counter()
+        delay_sec = self.config.interval_ms / 1000.0
+
+        for tick in range(1, self.config.ticks + 1):
+            tick_consolidations = 0
+            if verbose:
+                print(f"[Tick {tick:02d}/{self.config.ticks:02d}]")
+
+            for unit in self.units:
+                self.zero_state.apply_light_coax(unit, tick)
+                stage = self.field_one.advance_unit(unit)
+
+                hit_momentum = (
+                    unit.momentum >= self.config.consolidation_momentum_threshold
+                )
+                hit_step_limit = unit.steps_in_cycle >= self.config.max_cycle_steps
+
+                if hit_momentum or hit_step_limit:
+                    old_seed, new_seed = self._consolidate_unit(unit)
+                    tick_consolidations += 1
+                    if verbose:
+                        print(
+                            f"  Unit #{unit.unit_id}: consolidated ({stage}) | "
+                            f"seed {old_seed} -> {new_seed} | "
+                            f"lineage={unit.lineage_depth} | mom={unit.momentum:.2f}"
+                        )
+                elif verbose:
+                    print(
+                        f"  Unit #{unit.unit_id}: stage={stage:<14} | "
+                        f"mom={unit.momentum:.2f} | root={unit.root_depth:.2f} | "
+                        f"canopy={unit.canopy_reach:.2f} | seed={unit.pattern_seed}"
+                    )
+
+            macro_triggered = False
+            if (
+                self.total_local_consolidations > 0
+                and self.total_local_consolidations
+                % self.config.macro_collapse_every_n_consolidations
+                == 0
+                and tick_consolidations > 0
+            ):
+                self._trigger_macro_collapse()
+                macro_triggered = True
+                if verbose:
+                    print(
+                        f"  >>> Macro consolidation #{self.macro_collapses}: "
+                        f"system re-seeded from 0 State."
+                    )
+
+            elapsed = round(time.perf_counter() - start_perf, 4)
+            self.snapshots.append(
+                TickSnapshot(
+                    tick=tick,
+                    elapsed_seconds=elapsed,
+                    mean_momentum=round(
+                        statistics.fmean(u.momentum for u in self.units), 4
+                    ),
+                    mean_root_depth=round(
+                        statistics.fmean(u.root_depth for u in self.units), 4
+                    ),
+                    mean_canopy_reach=round(
+                        statistics.fmean(u.canopy_reach for u in self.units), 4
+                    ),
+                    hub_pool_size=len(self.field_one.redistributed_pool),
+                    local_consolidations=tick_consolidations,
+                    macro_collapse_triggered=macro_triggered,
+                )
+            )
+
+            if delay_sec > 0.0 and tick < self.config.ticks:
+                time.sleep(delay_sec)
+
+        report: dict[str, object] = {
+            "config": asdict(self.config),
+            "total_local_consolidations": self.total_local_consolidations,
+            "macro_collapses": self.macro_collapses,
+            "total_reconfigurations": self.zero_state.total_reconfigurations,
+            "final_hub_pool_size": len(self.field_one.redistributed_pool),
+            "final_units": [asdict(u) for u in self.units],
+            "snapshots": [asdict(s) for s in self.snapshots],
+        }
+
+        if self.config.output_json:
+            with open(self.config.output_json, "w", encoding="utf-8") as fh:
+                json.dump(report, fh, indent=2)
+
+        return report
+
+
+def parse_args(argv: list[str] | None = None) -> SimulationConfig:
+    """Parse CLI arguments into a validated SimulationConfig."""
+    parser = argparse.ArgumentParser(
+        description="Run the 0 State / 1 State / Field 1 living architecture simulation."
+    )
+    parser.add_argument(
+        "--units", type=int, default=5, help="Number of autonomous units (>= 1)"
+    )
+    parser.add_argument(
+        "--ticks", type=int, default=12, help="Number of simulation ticks (>= 1)"
+    )
+    parser.add_argument(
+        "--interval-ms",
+        type=int,
+        default=0,
+        help="Optional pause per tick in milliseconds (e.g., 1400)",
+    )
+    parser.add_argument(
+        "--coax-slope",
+        type=float,
+        default=0.05,
+        help="Light coaxing slope from 0 State in [-0.5, 0.5]",
+    )
+    parser.add_argument(
+        "--momentum-threshold",
+        type=float,
+        default=0.90,
+        help="Momentum threshold triggering local consolidation [0.1, 1.0]",
+    )
+    parser.add_argument(
+        "--max-steps",
+        type=int,
+        default=4,
+        help="Max steps per unit cycle before local consolidation (>= 1)",
+    )
+    parser.add_argument(
+        "--macro-every",
+        type=int,
+        default=6,
+        help="Trigger macro consolidation every N local consolidations (>= 1)",
+    )
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=42,
+        help="Random seed for reproducibility (use -1 for unseeded)",
+    )
+    parser.add_argument(
+        "--no-json",
+        action="store_true",
+        help="Skip writing the JSON summary report file",
+    )
+
+    args = parser.parse_args(argv)
+    resolved_seed = None if args.seed < 0 else args.seed
+    output_path = None if args.no_json else "simulation_report.json"
+
+    return SimulationConfig(
+        num_units=args.units,
+        ticks=args.ticks,
+        interval_ms=args.interval_ms,
+        coax_slope=args.coax_slope,
+        consolidation_momentum_threshold=args.momentum_threshold,
+        max_cycle_steps=args.max_steps,
+        macro_collapse_every_n_consolidations=args.macro_every,
+        seed=resolved_seed,
+        output_json=output_path,
+    )
+
+
+def main(argv: list[str] | None = None) -> None:
+    config = parse_args(argv)
+    sim = LivingArchitectureSimulation(config)
+    report = sim.run(verbose=True)
+
+    print("\nSummary:")
+    print(f"  Local consolidations: {report['total_local_consolidations']}")
+    print(f"  Macro collapses:      {report['macro_collapses']}")
+    print(f"  Reconfigurations:     {report['total_reconfigurations']}")
+    print(f"  Hub pool size:        {report['final_hub_pool_size']}")
+    if config.output_json:
+        print(f"  Saved report:         {config.output_json}")
+
+
+if __name__ == "__main__":
+    main()
