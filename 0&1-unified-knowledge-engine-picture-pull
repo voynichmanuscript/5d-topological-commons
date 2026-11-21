@@ -1,0 +1,207 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+================================================================================
+TOOL:       0and1-image-view
+AUTHOR:     Justin Ronald Moser (J. Moser)
+REPO:       github.com/voynichmanuscript/5d-topological-commons
+PURPOSE:    Allows anyone to pull embedded or folder-based 0 & 1 visual plates
+            and view them immediately via an auto-generated HTML5 contact sheet.
+RUNTIME:    100% Python Standard Library (Zero external dependencies)
+================================================================================
+"""
+
+from __future__ import annotations
+
+import argparse
+import ast
+import base64
+import hashlib
+import html
+import sys
+import webbrowser
+from pathlib import Path
+from typing import Dict, List, Tuple
+
+WATERMARK = "Justin Ronald Moser | Justin R. Moser | J. Moser"
+
+
+def load_embedded_from_script(script_path: Path) -> Dict[str, Dict[str, str]]:
+    """Safely extracts EMBEDDED_PLATES dictionary from a Python bundle file."""
+    source = script_path.read_text(encoding="utf-8")
+    tree = ast.parse(source, filename=str(script_path))
+    for node in tree.body:
+        if isinstance(node, ast.Assign):
+            for target in node.targets:
+                if isinstance(target, ast.Name) and target.id == "EMBEDDED_PLATES":
+                    parsed = ast.literal_eval(node.value)
+                    if isinstance(parsed, dict):
+                        return parsed
+    return {}
+
+
+def pull_and_prepare_images(
+    source_path: Path, out_dir: Path
+) -> List[Tuple[str, Path, str, str]]:
+    """
+    Pulls images either from:
+      1) A .py bundle file containing EMBEDDED_PLATES, OR
+      2) A directory containing image files (.jpg, .jpeg, .png, .webp).
+    Returns a list of (plate_id, saved_path, mime_type, b64_data).
+    """
+    out_dir.mkdir(parents=True, exist_ok=True)
+    results: List[Tuple[str, Path, str, str]] = []
+
+    if source_path.is_dir():
+        exts = {".jpg", ".jpeg", ".png", ".webp"}
+        files = sorted(
+            [p for p in source_path.iterdir() if p.is_file() and p.suffix.lower() in exts]
+        )
+        for idx, img_file in enumerate(files, start=1):
+            raw = img_file.read_bytes()
+            ext = img_file.suffix.lower().lstrip(".")
+            if ext == "jpeg":
+                ext = "jpg"
+            mime = "image/png" if ext == "png" else ("image/webp" if ext == "webp" else "image/jpeg")
+            plate_id = f"plate_{idx:02d}_{img_file.stem}"
+            target = out_dir / f"{plate_id}.{ext}"
+            target.write_bytes(raw)
+            results.append((plate_id, target, mime, base64.b64encode(raw).decode("ascii")))
+        return results
+
+    embedded = load_embedded_from_script(source_path)
+    for plate_id, entry in embedded.items():
+        if not isinstance(entry, dict) or not entry.get("b64"):
+            continue
+        raw = base64.b64decode(entry["b64"])
+        expected_sha = entry.get("sha256")
+        if expected_sha:
+            actual_sha = hashlib.sha256(raw).hexdigest()
+            if actual_sha != expected_sha:
+                print(f"[SKIP] Hash mismatch on {plate_id}")
+                continue
+        ext = str(entry.get("ext", "jpg")).lower().lstrip(".") or "jpg"
+        mime = "image/png" if ext == "png" else "image/jpeg"
+        target = out_dir / f"{plate_id}.{ext}"
+        target.write_bytes(raw)
+        results.append((plate_id, target, mime, entry["b64"]))
+
+    return results
+
+
+def build_viewer_html(
+    items: List[Tuple[str, Path, str, str]], out_dir: Path, source_label: str
+) -> Path:
+    """Creates a self-contained HTML5 viewer so anyone can inspect all pulled images."""
+    cards: List[str] = []
+    for idx, (plate_id, saved_path, mime, b64_data) in enumerate(items, start=1):
+        safe_id = html.escape(plate_id)
+        safe_file = html.escape(saved_path.name)
+        cards.append(
+            f"""
+            <figure class="plate-card">
+              <div class="meta">
+                <span>#{idx:02d} — {safe_id}</span>
+                <span>{safe_file}</span>
+              </div>
+              <a href="data:{mime};base64,{b64_data}" target="_blank" title="Open full size">
+                <img src="data:{mime};base64,{b64_data}" alt="{safe_id}" loading="lazy"/>
+              </a>
+            </figure>
+            """
+        )
+
+    viewer_html = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>0and1-image-view — {html.escape(source_label)}</title>
+<style>
+  body {{
+    margin: 0; padding: 20px; background: #05070d; color: #eef3fb;
+    font-family: system-ui, -apple-system, sans-serif;
+  }}
+  header {{
+    max-width: 1280px; margin: 0 auto 24px; padding-bottom: 14px;
+    border-bottom: 1px solid #1d2942;
+  }}
+  h1 {{ margin: 0 0 6px; color: #38e8ff; font-size: 1.4rem; }}
+  p {{ margin: 4px 0; color: #96a8c8; font-size: 0.9rem; }}
+  .wm {{ color: #ffd166; font-weight: 600; }}
+  .grid {{
+    max-width: 1280px; margin: 0 auto;
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    gap: 16px;
+  }}
+  .plate-card {{
+    margin: 0; background: #0c1220; border: 1px solid #1d2942;
+    border-radius: 14px; overflow: hidden;
+  }}
+  .meta {{
+    display: flex; justify-content: space-between; gap: 8px;
+    padding: 10px 12px; font-size: 0.8rem; color: #9cb0d1;
+    border-bottom: 1px solid #1d2942;
+  }}
+  .plate-card img {{ width: 100%; display: block; background: #000; }}
+</style>
+</head>
+<body>
+<header>
+  <h1>0and1-image-view // Pulled Image Viewer</h1>
+  <p>Source: <strong>{html.escape(source_label)}</strong> &bull; Total images pulled: <strong>{len(items)}</strong></p>
+  <p class="wm">Watermarked: {html.escape(WATERMARK)}</p>
+</header>
+<main class="grid">
+  {''.join(cards) if cards else '<p>No images found to display.</p>'}
+</main>
+</body>
+</html>
+"""
+    viewer_path = out_dir / "view_0and1_images.html"
+    viewer_path.write_text(viewer_html, encoding="utf-8")
+    return viewer_path
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(
+        prog="0and1-image-view",
+        description="Pull 0 & 1 images from a bundle script or folder and open an HTML5 viewer.",
+    )
+    parser.add_argument(
+        "source",
+        type=Path,
+        nargs="?",
+        default=Path("zero_one_knowledge_bundle_embedded.py"),
+        help="Path to bundle .py script or folder of images",
+    )
+    parser.add_argument(
+        "--out",
+        type=Path,
+        default=Path("viewed_0and1_images"),
+        help="Output folder for pulled image files and viewer HTML",
+    )
+    parser.add_argument(
+        "--no-open",
+        action="store_true",
+        help="Pull images and build viewer HTML without launching browser",
+    )
+    args = parser.parse_args()
+
+    print(f"[0and1-image-view] Watermark: {WATERMARK}")
+    if not args.source.exists():
+        print(f"[INFO] Source '{args.source}' not found yet. Place a packed .py bundle or image folder there.")
+        return 0
+
+    pulled = pull_and_prepare_images(args.source, args.out)
+    viewer_file = build_viewer_html(pulled, args.out, str(args.source))
+    print(f"[DONE] Pulled {len(pulled)} image(s) -> {args.out.resolve()}")
+    print(f"[DONE] Viewer ready -> {viewer_file.resolve()}")
+
+    if not args.no_open and pulled:
+        webbrowser.open(viewer_file.resolve().as_uri())
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
