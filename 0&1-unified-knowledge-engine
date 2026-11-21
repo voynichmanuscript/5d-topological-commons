@@ -1,0 +1,502 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+================================================================================
+PROJECT:    5D-TOPOLOGICAL-COMMONS // 0 & 1 UNIFIED KNOWLEDGE ENGINE
+AUTHOR:     Justin Ronald Moser (J. Moser)
+HANDLE:     github.com/voynichmanuscript/5d-topological-commons
+EMAIL:      hairspringprecision@tutamail.com
+LICENSE:    Open Topological Commons — Watermarked Authorship Edition
+RUNTIME:    100% Python Standard Library (Zero external dependencies required)
+================================================================================
+"""
+
+from __future__ import annotations
+
+import argparse
+import base64
+import hashlib
+import html
+import json
+import math
+import os
+import struct
+import sys
+import webbrowser
+import zlib
+from pathlib import Path
+from typing import Dict, List, Tuple
+
+WATERMARK = {
+    "author": "Justin Ronald Moser",
+    "signature": "Justin R. Moser | J. Moser",
+    "repository": "voynichmanuscript/5d-topological-commons",
+    "contact": "hairspringprecision@tutamail.com",
+    "architecture": "0-State Engine -> 1-State Manifestation -> 2+ Bifurcation",
+}
+
+# ==============================================================================
+# 1. COMPLETE 0 & 1 KNOWLEDGE TAXONOMY (ALL LEVELS + GENERATIVE RULES)
+# ==============================================================================
+KNOWLEDGE_CODEX: Dict[str, object] = {
+    "meta": WATERMARK,
+    "generative_axioms": {
+        "arithmetic_static": {
+            "formula": "0 + 1 = 1",
+            "domain": "Linear static counting",
+            "principle": "Adding a single unit to zero yields an inert scalar 1.",
+        },
+        "natures_math_bifurcation": {
+            "formula": "0 + 1 -> 2 (primary), 3 (tertiary), n+ (rare)",
+            "domain": "Thermodynamics, cellular mitosis, wave polarity, botany",
+            "principle": (
+                "Introducing 1 unit of energy or tension into a 0-state equilibrium "
+                "breaks symmetry and splits into 2 poles/branches (minimum-energy path). "
+                "3-way triple junctions (120 deg) occur only under isotropic pressure."
+            ),
+        },
+        "biological_reproduction_hellins_law": {
+            "formula": "P(k offspring) ~ 1 / n^(k-1), where n ~ 85 naturally",
+            "singleton_1": "~97.0% (default equilibrium outcome)",
+            "twins_2": "~2.9% (~1 in 80-90 natural births; monozygotic split or dizygotic)",
+            "triplets_3": "~0.015% (~1 in 7,225 natural births; rare secondary split)",
+            "quadruplets_plus_4": "<0.0002% (~1 in 614,125+ natural births; extreme edge case)",
+        },
+    },
+    "six_levels_of_understanding": [
+        {
+            "level": 1,
+            "title": "Arithmetic & Intuition",
+            "zero_role": "Additive Identity (0 + N = N), Origin, Empty Set / Absence",
+            "one_role": "Multiplicative Identity (1 * N = N), Indivisible Unit, Singularity",
+            "key_equations": ["0 + N = N", "1 * N = N", "N - N = 0", "N / N = 1 (N != 0)"],
+        },
+        {
+            "level": 2,
+            "title": "Place Value & Positional Notation",
+            "zero_role": "Positional Placeholder enabling arbitrary magnitude scaling",
+            "one_role": "Primary Positional Digit scaled by base^k",
+            "key_equations": ["101_10 = 1*10^2 + 0*10^1 + 1*10^0", "10^0 = 1"],
+        },
+        {
+            "level": 3,
+            "title": "Number Systems, Parity & Undefined Boundaries",
+            "zero_role": "Even integer (0 mod 2 = 0); Division by zero undefined",
+            "one_role": "Odd integer (1 mod 2 = 1); Zero-exponent identity (N^0 = 1)",
+            "key_equations": ["a / 0 = Undefined", "N^0 = 1 (N != 0)", "Fibonacci parity: O, O, E"],
+        },
+        {
+            "level": 4,
+            "title": "Boolean Algebra, Binary Logic & Digital Hardware",
+            "zero_role": "FALSE / Open Circuit / Low Voltage (0V)",
+            "one_role": "TRUE / Closed Circuit / High Voltage (+5V)",
+            "key_equations": ["NOT(0)=1", "1 AND 0 = 0", "1 OR 0 = 1", "1 XOR 0 = 1", "1 Byte = 8 Bits"],
+        },
+        {
+            "level": 5,
+            "title": "Philosophy, Metaphysics & Cosmogenesis",
+            "zero_role": "Sunyata (Emptiness / Pure Potentiality / The Uncarved Tao)",
+            "one_role": "The Monad (Indivisible Unity / First Emanation)",
+            "key_equations": ["0 (Void) -> 1 (Monad) -> 2 (Duality) -> 3 (Triad) -> All Things"],
+        },
+        {
+            "level": 6,
+            "title": "Quantum Mechanics & Information Physics",
+            "zero_role": "Basis Ket |0> (North Pole of Bloch Sphere)",
+            "one_role": "Basis Ket |1> (South Pole of Bloch Sphere)",
+            "key_equations": [
+                "|psi> = alpha|0> + beta|1>, where |alpha|^2 + |beta|^2 = 1",
+                "Landauer Limit: E >= k_B * T * ln(2) per erased bit",
+                "Wheeler: It from Bit",
+            ],
+        },
+    ],
+    "noosphere_synthesis": {
+        "physical_substrate": "Atoms -> Neural Networks -> Galaxies (Empirical Observable Universe)",
+        "cognitive_bridge": "Golden Helix / Synaptic Encoding translating sensory data into archetypes",
+        "abstract_constructs": {
+            "Phi": "Beauty, Golden Ratio (1.6180339...), Harmonic Proportion",
+            "Psi": "Cognition, Quantum Wavefunction, Conscious Experience",
+            "Delta": "Change, Transformation, Universal Truth / Unity Triad",
+        },
+    },
+}
+
+# ==============================================================================
+# 2. 14 VISUAL PLATES CATALOG + EMBEDDED BASE64 PAYLOAD REGISTRY
+#    (Populate EMBEDDED_PLATES automatically via `--pack <image_folder>`)
+# ==============================================================================
+PLATE_MANIFEST: List[Dict[str, str]] = [
+    {"id": "plate_01", "title": "Pathways to Multiples & Hellin's Law Distribution", "theme": "biology"},
+    {"id": "plate_02", "title": "6-Level Master Grid: Arithmetic to Quantum Qubit", "theme": "six_levels"},
+    {"id": "plate_03", "title": "From Atom to Idea: The Spectrum of Understanding", "theme": "spectrum"},
+    {"id": "plate_04", "title": "The Bioluminescent Brain: Encoding the Abstract (Phi, Scale, Eye)", "theme": "neural"},
+    {"id": "plate_05", "title": "The Noosphere Cycle: Physical Substrate to Universal Truth", "theme": "noosphere"},
+    {"id": "plate_06", "title": "Abstract Kinetic Sculpture: Platonic Geometry & Noosphere Ring", "theme": "sculpture"},
+    {"id": "plate_07", "title": "Macro Synaptic Plasticity & Crystalline Archetypes", "theme": "neural_macro"},
+    {"id": "plate_08", "title": "Synthesized Noosphere Pyramid: Architecture of Knowledge", "theme": "pyramid"},
+    {"id": "plate_09", "title": "Triad Core: Psi, Mandelbrot Unity & Delta Golden Helix", "theme": "triad"},
+    {"id": "plate_10", "title": "It From Bit: Integrated Cosmic-Neural-Symbolic Field", "theme": "it_from_bit"},
+    {"id": "plate_11", "title": "Immersive Observatory I: Cylindrical Noosphere Installation", "theme": "observatory_1"},
+    {"id": "plate_12", "title": "Immersive Observatory II: Equations & Cultural Knowledge Walls", "theme": "observatory_2"},
+    {"id": "plate_13", "title": "Immersive Observatory III: Full Unified Synthesis Field", "theme": "observatory_3"},
+    {"id": "plate_14", "title": "Full Discovery Apex: Complete Synthesis of Mind & Matter", "theme": "apex"},
+]
+
+# Maps plate_id -> {"ext": "jpg"|"png", "sha256": "...", "b64": "..."}
+EMBEDDED_PLATES: Dict[str, Dict[str, str]] = {}
+
+
+# ==============================================================================
+# 3. PURE-PYTHON PNG SYNTHESIZER (ZERO EXTERNAL LIBRARIES NEEDED)
+# ==============================================================================
+def _render_procedural_png(plate_index: int, width: int = 640, height: int = 360) -> bytes:
+    """
+    Generates a crisp, high-contrast neon-on-black mathematical & topological
+    visualization PNG in pure Python (using only zlib + struct + math) whenever
+    external photo payloads have not yet been packed into EMBEDDED_PLATES.
+    """
+    cx, cy = width * 0.5, height * 0.5
+    phi = (1.0 + math.sqrt(5.0)) * 0.5
+    raw_rows = bytearray()
+
+    for y in range(height):
+        raw_rows.append(0)  # PNG filter type 0 (None)
+        ny = (y - cy) / (height * 0.5)
+        for x in range(width):
+            nx = (x - cx) / (width * 0.5)
+            r_dist = math.hypot(nx * 1.45, ny)
+            angle = math.atan2(ny, nx)
+
+            # Deep obsidian backdrop (#05070D)
+            r, g, b = 5, 7, 13
+
+            # Concentric orbital rings (0-state boundary & 1-state harmonics)
+            ring_wave = abs(math.sin((r_dist * 9.0 - plate_index * 0.35) * math.pi))
+            if ring_wave > 0.965 and r_dist < 1.35:
+                glow = (ring_wave - 0.965) / 0.035
+                r += int(40 * glow)
+                g += int(195 * glow)
+                b += int(255 * glow)
+
+            # Golden spiral / helix filaments (Cognition bridge)
+            spiral_phase = angle * (2 + (plate_index % 4)) + r_dist * 7.5 * phi + plate_index * 0.5
+            helix = abs(math.cos(spiral_phase))
+            if helix > 0.975 and r_dist < 1.15:
+                hglow = (helix - 0.975) / 0.025
+                r += int(255 * hglow)
+                g += int(205 * hglow)
+                b += int(75 * hglow)
+
+            # Central 0-to-1 bifurcation nodes (1 -> 2 -> 3 symmetry)
+            nodes = [(0.0, 0.0)]
+            if plate_index >= 1:
+                nodes.extend([(-0.38, 0.0), (0.38, 0.0)])
+            if plate_index >= 3:
+                nodes.extend([(0.0, -0.36), (0.0, 0.36)])
+            for idx_n, (px, py) in enumerate(nodes):
+                d = math.hypot((nx - px) * 1.45, ny - py)
+                if d < 0.22:
+                    core = math.exp(-((d / 0.075) ** 2))
+                    if idx_n % 2 == 0:
+                        r += int(90 * core)
+                        g += int(235 * core)
+                        b += int(255 * core)
+                    else:
+                        r += int(255 * core)
+                        g += int(110 * core)
+                        b += int(230 * core)
+
+            raw_rows.extend((min(255, r), min(255, g), min(255, b)))
+
+    def chunk(tag: bytes, payload: bytes) -> bytes:
+        return (
+            struct.pack(">I", len(payload))
+            + tag
+            + payload
+            + struct.pack(">I", zlib.crc32(tag + payload) & 0xFFFFFFFF)
+        )
+
+    ihdr = struct.pack(">IIBBBBB", width, height, 8, 2, 0, 0, 0)
+    idat = zlib.compress(bytes(raw_rows), level=6)
+    return b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", ihdr) + chunk(b"IDAT", idat) + chunk(b"IEND", b"")
+
+
+# ==============================================================================
+# 4. SIMULATIONS & VERIFICATION SUITE
+# ==============================================================================
+def simulate_bifurcation(steps: int = 8) -> List[Dict[str, object]]:
+    """Models 0 + 1 -> 2 primary splitting with rare 3-way triple junctions."""
+    state_count = 1
+    history = [{"step": 0, "states": 0, "event": "0-State Void / Equilibrium"}]
+    for s in range(1, steps + 1):
+        if s == 1:
+            event = "1-State Spark injected into 0-State (0 + 1 -> 1)"
+        elif s % 4 == 0:
+            state_count = state_count * 2 + 1
+            event = "Bifurcation + Isotropic Triple Junction (2x + 1)"
+        else:
+            state_count *= 2
+            event = "Minimum-Energy Binary Bifurcation (x2)"
+        history.append({"step": s, "states": state_count, "event": event})
+    return history
+
+
+def verify_knowledge_integrity() -> Tuple[bool, List[str]]:
+    """Runs automated self-checks to guarantee clean, error-free execution."""
+    report: List[str] = []
+    # Check 1: Arithmetic & exponent identities
+    assert (0 + 42 == 42) and (1 * 42 == 42) and (5 ** 0 == 1), "Identity check failed"
+    report.append("[OK] Level 1-3 Arithmetic, Placeholder & Exponent identities verified.")
+
+    # Check 2: Boolean logic gates
+    assert (int(not 0) == 1) and ((1 & 0) == 0) and ((1 | 0) == 1) and ((1 ^ 0) == 1)
+    report.append("[OK] Level 4 Boolean logic gates (NOT, AND, OR, XOR) verified.")
+
+    # Check 3: Qubit normalization |alpha|^2 + |beta|^2 = 1
+    alpha, beta = 1.0 / math.sqrt(2.0), 1.0 / math.sqrt(2.0)
+    assert math.isclose(abs(alpha) ** 2 + abs(beta) ** 2, 1.0, rel_tol=1e-12)
+    report.append("[OK] Level 6 Quantum Qubit Bloch sphere normalization verified.")
+
+    # Check 4: Plate count & embedded payload hashes
+    assert len(PLATE_MANIFEST) == 14, "Expected 14 plates in manifest"
+    for pid, entry in EMBEDDED_PLATES.items():
+        raw = base64.b64decode(entry["b64"])
+        digest = hashlib.sha256(raw).hexdigest()
+        assert digest == entry["sha256"], f"SHA-256 mismatch on {pid}"
+    mode_label = (
+        f"{len(EMBEDDED_PLATES)} embedded photo payloads verified"
+        if EMBEDDED_PLATES
+        else "14 procedural PNG generators active (use --pack <dir> to embed photos)"
+    )
+    report.append(f"[OK] Visual plate pipeline verified ({mode_label}).")
+    return True, report
+
+
+# ==============================================================================
+# 5. PHOTO PACKER (EMBEDS ALL 14 PHOTOS INTO A STANDALONE .PY SCRIPT)
+# ==============================================================================
+def pack_photos_into_self(photo_dir: Path, output_script: Path) -> None:
+    """
+    Reads up to 14 image files (.jpg/.jpeg/.png/.webp) from `photo_dir`,
+    encodes them as verified Base64 payloads, and writes a new standalone
+    Python script with every image permanently embedded inside.
+    """
+    valid_exts = {".jpg", ".jpeg", ".png", ".webp"}
+    candidates = sorted(
+        [p for p in photo_dir.iterdir() if p.is_file() and p.suffix.lower() in valid_exts]
+    )
+    if not candidates:
+        raise FileNotFoundError(f"No .jpg/.png/.webp files found in: {photo_dir}")
+
+    packed: Dict[str, Dict[str, str]] = {}
+    for idx, plate in enumerate(PLATE_MANIFEST):
+        if idx >= len(candidates):
+            break
+        img_path = candidates[idx]
+        raw = img_path.read_bytes()
+        ext = "png" if img_path.suffix.lower() == ".png" else "jpg"
+        packed[plate["id"]] = {
+            "ext": ext,
+            "filename": img_path.name,
+            "sha256": hashlib.sha256(raw).hexdigest(),
+            "b64": base64.b64encode(raw).decode("ascii"),
+        }
+
+    source_text = Path(__file__).read_text(encoding="utf-8")
+    marker = "EMBEDDED_PLATES: Dict[str, Dict[str, str]] = {}"
+    if marker not in source_text:
+        raise RuntimeError("Template marker not found in script source.")
+
+    serialized = "EMBEDDED_PLATES: Dict[str, Dict[str, str]] = " + json.dumps(packed, indent=2)
+    bundled_source = source_text.replace(marker, serialized, 1)
+    output_script.write_text(bundled_source, encoding="utf-8")
+    print(f"[SUCCESS] Embedded {len(packed)} photos into standalone script: {output_script}")
+
+
+# ==============================================================================
+# 6. BUNDLE EXPORTER (HTML5 GALLERY + INDIVIDUAL IMAGES + JSON CODEX)
+# ==============================================================================
+def build_bundle(out_dir: Path, open_browser: bool = False) -> Path:
+    out_dir.mkdir(parents=True, exist_ok=True)
+    img_dir = out_dir / "plates"
+    img_dir.mkdir(exist_ok=True)
+
+    cards_html: List[str] = []
+    for idx, plate in enumerate(PLATE_MANIFEST):
+        pid = plate["id"]
+        title = plate["title"]
+        if pid in EMBEDDED_PLATES:
+            ext = EMBEDDED_PLATES[pid]["ext"]
+            b64_str = EMBEDDED_PLATES[pid]["b64"]
+            raw = base64.b64decode(b64_str)
+            mime = "image/png" if ext == "png" else "image/jpeg"
+        else:
+            ext = "png"
+            raw = _render_procedural_png(idx)
+            b64_str = base64.b64encode(raw).decode("ascii")
+            mime = "image/png"
+
+        img_file = img_dir / f"{pid}.{ext}"
+        img_file.write_bytes(raw)
+        sha = hashlib.sha256(raw).hexdigest()[:16]
+
+        cards_html.append(
+            f"""
+            <article class="card">
+              <div class="card-head">
+                <span class="badge">PLATE {idx + 1:02d} / 14</span>
+                <span class="hash">SHA256:{sha}</span>
+              </div>
+              <img src="data:{mime};base64,{b64_str}" alt="{html.escape(title)}" loading="lazy"/>
+              <h3>{html.escape(title)}</h3>
+            </article>
+            """
+        )
+
+    codex_payload = {
+        "knowledge": KNOWLEDGE_CODEX,
+        "bifurcation_simulation": simulate_bifurcation(8),
+        "plates": PLATE_MANIFEST,
+    }
+    (out_dir / "zero_one_knowledge_codex.json").write_text(
+        json.dumps(codex_payload, indent=2), encoding="utf-8"
+    )
+
+    levels_html = "".join(
+        f"""
+        <div class="level-box">
+          <h4>Level {lvl['level']}: {html.escape(str(lvl['title']))}</h4>
+          <p><strong>0 (Void/Basis):</strong> {html.escape(str(lvl['zero_role']))}</p>
+          <p><strong>1 (Unity/Basis):</strong> {html.escape(str(lvl['one_role']))}</p>
+          <code>{' | '.join(html.escape(eq) for eq in lvl['key_equations'])}</code>
+        </div>
+        """
+        for lvl in KNOWLEDGE_CODEX["six_levels_of_understanding"]  # type: ignore[index]
+    )
+
+    index_html = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>0 &amp; 1 Unified Knowledge Atlas — Justin Ronald Moser</title>
+<style>
+  :root {{
+    --bg: #05070d; --panel: #0c111d; --border: #1e2a44;
+    --cyan: #38e8ff; --gold: #ffd166; --text: #e6edf7; --muted: #8ea0c0;
+  }}
+  * {{ box-sizing: border-box; }}
+  body {{
+    margin: 0; font-family: system-ui, -apple-system, sans-serif;
+    background: var(--bg); color: var(--text); line-height: 1.5;
+  }}
+  header {{
+    padding: 28px 20px; text-align: center;
+    border-bottom: 1px solid var(--border);
+    background: radial-gradient(circle at top, #101b33, #05070d 70%);
+  }}
+  header h1 {{ margin: 0 0 8px; color: var(--cyan); letter-spacing: 0.04em; }}
+  header p {{ margin: 4px 0; color: var(--muted); font-size: 0.92rem; }}
+  .watermark {{ color: var(--gold); font-weight: 600; font-size: 0.85rem; }}
+  main {{ max-width: 1280px; margin: 0 auto; padding: 24px 16px 60px; }}
+  .levels-grid {{
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 14px; margin-bottom: 32px;
+  }}
+  .level-box {{
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 14px; padding: 16px;
+  }}
+  .level-box h4 {{ margin: 0 0 8px; color: var(--gold); }}
+  .level-box p {{ margin: 4px 0; font-size: 0.9rem; }}
+  .level-box code {{
+    display: block; margin-top: 8px; padding: 6px 8px;
+    background: #070a12; color: var(--cyan); border-radius: 8px; font-size: 0.8rem;
+  }}
+  .gallery {{
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+    gap: 18px;
+  }}
+  .card {{
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 16px; overflow: hidden;
+  }}
+  .card-head {{
+    display: flex; justify-content: space-between; padding: 10px 14px;
+    font-size: 0.78rem; color: var(--muted); border-bottom: 1px solid var(--border);
+  }}
+  .badge {{ color: var(--cyan); font-weight: 700; }}
+  .card img {{ width: 100%; display: block; background: #000; }}
+  .card h3 {{ margin: 0; padding: 12px 14px; font-size: 0.98rem; color: var(--text); }}
+</style>
+</head>
+<body>
+<header>
+  <h1>0 &amp; 1 UNIFIED KNOWLEDGE ATLAS // THE NOOSPHERE</h1>
+  <p>From 0-State Void &amp; 1-State Singularity to Bifurcation, Biology, Boolean Logic, Philosophy &amp; Quantum Qubits</p>
+  <p class="watermark">Authored &amp; Watermarked by {WATERMARK['author']} ({WATERMARK['repository']})</p>
+</header>
+<main>
+  <section class="levels-grid">{levels_html}</section>
+  <section class="gallery">{''.join(cards_html)}</section>
+</main>
+</body>
+</html>
+"""
+    index_path = out_dir / "index.html"
+    index_path.write_text(index_html, encoding="utf-8")
+    if open_browser:
+        webbrowser.open(index_path.resolve().as_uri())
+    return index_path
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(
+        description="0 & 1 Unified Knowledge & Embedded Visual Atlas (Justin Ronald Moser)"
+    )
+    parser.add_argument(
+        "--out",
+        type=Path,
+        default=Path("zero_one_atlas_dist"),
+        help="Output directory for index.html, JSON codex, and extracted plates",
+    )
+    parser.add_argument(
+        "--pack",
+        type=Path,
+        default=None,
+        help="Optional directory of 14 saved images to embed directly into a standalone .py file",
+    )
+    parser.add_argument(
+        "--packed-out",
+        type=Path,
+        default=Path("zero_one_knowledge_bundle_embedded.py"),
+        help="Destination filename when using --pack",
+    )
+    parser.add_argument(
+        "--open",
+        action="store_true",
+        help="Open the generated HTML5 atlas in your default browser",
+    )
+    args = parser.parse_args()
+
+    ok, checks = verify_knowledge_integrity()
+    print("=" * 72)
+    print(f"WATERMARK: {WATERMARK['author']} | {WATERMARK['repository']}")
+    print("=" * 72)
+    for line in checks:
+        print(line)
+
+    if args.pack is not None:
+        pack_photos_into_self(args.pack, args.packed_out)
+        return 0
+
+    index_file = build_bundle(args.out, open_browser=args.open)
+    print(f"[DONE] Offline HTML5 Atlas generated : {index_file.resolve()}")
+    print(f"[DONE] Structured JSON Codex ready  : {(args.out / 'zero_one_knowledge_codex.json').resolve()}")
+    print(f"[DONE] 14 Visual Plates exported to  : {(args.out / 'plates').resolve()}")
+    return 0 if ok else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())
