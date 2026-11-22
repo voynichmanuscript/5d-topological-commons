@@ -1,0 +1,47 @@
+# schrodinger.py
+import random
+
+
+class QuantumState:
+    def __init__(self, possibilities):
+        self._possibilities = tuple(possibilities)
+        self._collapsed = False
+        self._value = None
+
+    def __set_name__(self, owner, name):
+        self._name = name
+
+    def __get__(self, instance, owner):
+        if instance is None:
+            return self
+        if not self._collapsed:
+            self._value = random.choice(self._possibilities)
+            self._collapsed = True
+        return self._value
+
+    def __set__(self, instance, value):
+        if isinstance(value, (list, tuple)):
+            self._possibilities = tuple(value)
+            self._collapsed = False
+            self._value = None
+        else:
+            self._value = value
+            self._collapsed = True
+
+    def __delete__(self, instance):
+        self._value = "<collapsed-into-nothing>"
+        self._collapsed = True
+
+
+class Vessel:
+    signal = QuantumState(["whisper", "static", "echo", "null"])
+
+
+if __name__ == "__main__":
+    v = Vessel()
+    print("in __dict__ before read:", "signal" in v.__dict__)
+    a = v.signal
+    b = v.signal
+    print(f"observed: {a!r} | again: {b!r} | same: {a == b}")
+    del v.signal
+    print(f"after del: {v.signal!r}")
