@@ -1,0 +1,219 @@
+"""
+Author: Justin Ronald Moser
+Module: genesis_monolith_simulation.py
+Purpose: Deterministic, glitch-free simulation of The Genesis Monolith closed-loop
+         metabolic, water filtration, gas-to-algae viewing, slide-gasket service
+         bypass, and counter-current thermal/condensation architecture.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Dict, List
+
+
+@dataclass
+class StageMetrics:
+    """Snapshot of a single stage's state after a simulation tick."""
+    name: str
+    stored: float
+    capacity: float
+    accepted: float
+    overflow: float
+    bypassed: bool
+
+
+class FlowStage:
+    """
+    Bounded physical stage with safe non-negative clamping, optional bypass
+    rerouting, and deterministic overflow calculation.
+    """
+
+    def __init__(self, name: str, capacity: float, initial_load: float = 0.0) -> None:
+        if not name or not name.strip():
+            raise ValueError("Stage name must be a non-empty string.")
+        if capacity <= 0.0:
+            raise ValueError(f"Stage '{name}' capacity must be greater than zero.")
+        if initial_load < 0.0:
+            raise ValueError(f"Stage '{name}' initial load cannot be negative.")
+
+        self.name: str = name.strip()
+        self.capacity: float = float(capacity)
+        self.stored: float = min(float(initial_load), self.capacity)
+        self.bypassed: bool = False
+
+    def set_bypass(self, enabled: bool) -> None:
+        """Enable or disable bypass rerouting for maintenance or servicing."""
+        self.bypassed = bool(enabled)
+
+    def process(self, inflow: float) -> StageMetrics:
+        """
+        Advance the stage by one time step with the given non-negative inflow.
+        When bypassed, incoming flow passes straight through without altering
+        internal storage.
+        """
+        if inflow < 0.0:
+            raise ValueError(f"Stage '{self.name}' inflow cannot be negative.")
+
+        clean_inflow = float(inflow)
+
+        if self.bypassed:
+            return StageMetrics(
+                name=self.name,
+                stored=round(self.stored, 4),
+                capacity=round(self.capacity, 4),
+                accepted=0.0,
+                overflow=round(clean_inflow, 4),
+                bypassed=True,
+            )
+
+        available_headroom = max(0.0, self.capacity - self.stored)
+        accepted = min(clean_inflow, available_headroom)
+        overflow = max(0.0, clean_inflow - accepted)
+
+        self.stored = min(self.capacity, self.stored + accepted)
+
+        return StageMetrics(
+            name=self.name,
+            stored=round(self.stored, 4),
+            capacity=round(self.capacity, 4),
+            accepted=round(accepted, 4),
+            overflow=round(overflow, 4),
+            bypassed=False,
+        )
+
+
+class GenesisMonolithLoop:
+    """
+    Models the coupled physical stages of The Genesis Monolith:
+      1. U-trap water-lock & anaerobic settling tank
+      2. Subsurface biochar & wetland reed biofilter
+      3. Stepped stone-and-clay live pools (frost-decoupled rim)
+      4. Conical gas dome -> scrubbed CO2 -> algae viewing bay (slide-gasket + winch)
+      5. Subterranean counter-current tunnel (warm rising air, cool wall condensate,
+         separated exhaust flue, and collection basin)
+    """
+
+    def __init__(self) -> None:
+        self.water_lock_sealed: bool = True
+        self.winch_rail_engaged: bool = False
+        self.tension_braces_locked: bool = True
+        self.exhaust_flue_isolated: bool = True
+
+        self.stages: Dict[str, FlowStage] = {
+            "anaerobic_tank": FlowStage("Anaerobic Settling Tank", capacity=250.0, initial_load=50.0),
+            "biochar_reed_bed": FlowStage("Biochar & Reed Biofilter", capacity=300.0, initial_load=40.0),
+            "live_pools": FlowStage("Stepped Live Pools", capacity=450.0, initial_load=120.0),
+            "algae_viewing_bay": FlowStage("Algae Viewing Chamber", capacity=180.0, initial_load=30.0),
+            "condensation_tunnel": FlowStage("Counter-Current Condense Tunnel", capacity=360.0, initial_load=45.0),
+            "collection_basin": FlowStage("Condensate & Return Basin", capacity=500.0, initial_load=60.0),
+        }
+
+    def set_algae_bay_service_mode(self, servicing: bool) -> None:
+        """
+        Engage or release service mode for the slide-gasket algae viewing module.
+        During servicing, bypass rerouting is active and the winch rail is engaged.
+        """
+        active = bool(servicing)
+        self.stages["algae_viewing_bay"].set_bypass(active)
+        self.winch_rail_engaged = active
+        self.tension_braces_locked = not active
+
+    def step(
+        self,
+        waste_inflow: float,
+        biogas_co2_feed: float,
+        condensate_moisture_inflow: float,
+        passive_drain_rate: float = 5.0,
+    ) -> Dict[str, StageMetrics]:
+        """
+        Execute one deterministic simulation step across all linked stages.
+        """
+        if passive_drain_rate < 0.0:
+            raise ValueError("Passive drain rate cannot be negative.")
+
+        # 1. Anaerobic tank receives waste & releases liquid effluent + biogas potential
+        tank_metrics = self.stages["anaerobic_tank"].process(waste_inflow)
+
+        # 2. Biochar and reed bed polishes effluent plus any tank overflow
+        bed_inflow = tank_metrics.accepted * 0.85 + tank_metrics.overflow
+        bed_metrics = self.stages["biochar_reed_bed"].process(bed_inflow)
+
+        # 3. Stepped live pools receive filtered water
+        pool_inflow = bed_metrics.accepted * 0.90 + bed_metrics.overflow
+        pool_metrics = self.stages["live_pools"].process(pool_inflow)
+
+        # 4. Algae viewing bay receives scrubbed CO2/gas stream (or bypasses when serviced)
+        algae_metrics = self.stages["algae_viewing_bay"].process(biogas_co2_feed)
+
+        # 5. Subterranean counter-current tunnel condenses moisture & handles pool overflow
+        tunnel_inflow = condensate_moisture_inflow + pool_metrics.overflow + algae_metrics.overflow
+        tunnel_metrics = self.stages["condensation_tunnel"].process(tunnel_inflow)
+
+        # 6. Collection basin gathers condensed water and controlled system bleed
+        basin_inflow = tunnel_metrics.accepted * 0.75 + tunnel_metrics.overflow
+        basin_metrics = self.stages["collection_basin"].process(basin_inflow)
+
+        # Apply gentle passive biological/evaporative draw to prevent artificial saturation
+        drain = float(passive_drain_rate)
+        for stage in self.stages.values():
+            stage.stored = max(0.0, round(stage.stored - min(stage.stored, drain * 0.25), 4))
+
+        return {
+            "anaerobic_tank": tank_metrics,
+            "biochar_reed_bed": bed_metrics,
+            "live_pools": pool_metrics,
+            "algae_viewing_bay": algae_metrics,
+            "condensation_tunnel": tunnel_metrics,
+            "collection_basin": basin_metrics,
+        }
+
+
+def format_report(cycle_label: str, results: Dict[str, StageMetrics]) -> str:
+    """Format a clean, human-readable status summary for a single tick."""
+    lines: List[str] = [f"=== {cycle_label} ==="]
+    for key, m in results.items():
+        mode = "BYPASS" if m.bypassed else "ACTIVE"
+        lines.append(
+            f"[{mode:6}] {m.name:32} | "
+            f"Stored: {m.stored:7.2f}/{m.capacity:6.2f} | "
+            f"In: {m.accepted:6.2f} | Ovf: {m.overflow:6.2f}"
+        )
+    return "\n".join(lines)
+
+
+def run_verification_suite() -> None:
+    """Run normal operation and maintenance bypass scenarios to verify stability."""
+    monolith = GenesisMonolithLoop()
+
+    # Normal steady operation
+    for tick in range(1, 4):
+        state = monolith.step(
+            waste_inflow=35.0,
+            biogas_co2_feed=20.0,
+            condensate_moisture_inflow=25.0,
+        )
+        print(format_report(f"Normal Tick {tick}", state))
+
+    # Engage slide-gasket & winch bypass on the algae viewing chamber
+    monolith.set_algae_bay_service_mode(True)
+    for tick in range(4, 6):
+        state = monolith.step(
+            waste_inflow=30.0,
+            biogas_co2_feed=20.0,
+            condensate_moisture_inflow=20.0,
+        )
+        print(format_report(f"Service Bypass Tick {tick}", state))
+
+    # Return algae viewing chamber to normal active operation
+    monolith.set_algae_bay_service_mode(False)
+    state_resumed = monolith.step(
+        waste_inflow=25.0,
+        biogas_co2_feed=15.0,
+        condensate_moisture_inflow=20.0,
+    )
+    print(format_report("Resumed Tick 6", state_resumed))
+
+
+if __name__ == "__main__":
+    run_verification_suite()
