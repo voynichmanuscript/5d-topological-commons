@@ -1,0 +1,41 @@
+# Author: Justin Ronald Moser
+# Block: god+darkness | Topological monument walker
+import hashlib, math
+
+BLOCK = "god+darkness"
+LANDMARKS = [
+    ("FOYER", 0.0, 0.0),
+    ("PILLAR", 1.0, 0.4),
+    ("GALLERY", 2.2, -0.3),
+    ("ARCH", 3.5, 0.8),
+    ("SANCTUM", 5.0, 0.0),
+    ("VAULT", 6.4, -0.7),
+    ("THRESHOLD", 8.0, 0.2),
+]
+
+def strike_metric(seed: str, idx: int) -> float:
+    raw = hashlib.sha256(f"{seed}::{idx}".encode()).hexdigest()
+    return int(raw[:10], 16) / 0xFFFFFFFFFF
+
+def span(a: tuple[float, float], b: tuple[float, float]) -> float:
+    return round(math.hypot(b[0] - a[0], b[1] - a[1]), 3)
+
+def traverse(block: str, stops: list[tuple[str, float, float]]) -> list[str]:
+    state = block
+    log = []
+    prev = (stops[0][1], stops[0][2])
+    for i, (name, x, y) in enumerate(stops):
+        cur = (x, y)
+        dist = span(prev, cur)
+        tension = round(strike_metric(state, i) * (1.0 + dist * 0.1), 4)
+        state = f"{state}|{name}:{dist}:{tension}"
+        log.append(f"{name:9s} d={dist:5.3f} t={tension:.4f}")
+        prev = cur
+    return log
+
+if __name__ == "__main__":
+    print(f"FOUNDATION: {BLOCK}")
+    for line in traverse(BLOCK, LANDMARKS):
+        print(" [strike]", line)
+    seal = hashlib.sha256(BLOCK.encode()).hexdigest()[:16]
+    print(f"SEAL: {seal}")
