@@ -1,0 +1,199 @@
+# Author: Justin Ronald Moser
+# File: 5d_anti_stagnation_complete.py
+# Standalone 5D Anti-Stagnation & Generalized Brood-Fibonacci Engine
+# Zero external dependencies (Python 3.10+ standard library only).
+
+from dataclasses import dataclass
+import math
+
+PHI: float = (1.0 + math.sqrt(5.0)) / 2.0
+GOOGOL: int = 10 ** 100
+REGIMES: tuple[str, ...] = (
+    "Frenzy",
+    "BlowOut_Displacement",
+    "Recollection",
+    "Love",
+    "Emotion",
+    "Matter",
+)
+REGIME_GLYPHS: dict[str, str] = {
+    "Frenzy": "!",
+    "BlowOut_Displacement": "~",
+    "Recollection": "+",
+    "Love": "*",
+    "Emotion": "#",
+    "Matter": "@",
+}
+
+OVERVIEW_NOTES: str = """
+5D ANTI-STAGNATION & GENERALIZED BROOD-FIBONACCI FRAMEWORK
+- Boundary Split (0 <-> Googol / Infinity): Operates in the interior field rather than a rigid edge.
+- True Math vs. State Jumps: 1 + 1 == 2 in arithmetic; state transitions use (->) with explicit
+  differential anomaly jumps (delta_anom) rather than false equalities.
+- Brood / Hatch Rate (k) & Normalized Units: x_n = x_{n-1} + k * x_{n-2} (or shock-perturbed),
+  where k=1..9 models small broods/litters and k>>1 models high-fecundity spawns/hatches.
+  Rescaling by u_t = x_t / k reveals scale-invariant topological flow across niches.
+- Characteristic Root: r_k = (1 + sqrt(1 + 4k)) / 2; for k=1, r_1 = PHI (~1.618034).
+- D1 (Magnitude & Brood Unit): Current value and normalized unit u = D1 / k.
+- D2 (Differential Jump): Step delta including mid-stream field anomalies.
+- D3 (Pedaling Vector): FWD (forward growth), BWD (negafibonacci unwind), DIAG (coupled step).
+- D4 (Parity & Record Gate): ODD/EVEN parity plus REC_ON / REC_OFF (frenzy amnesia gate).
+- D5 (Regime Cycle): Frenzy -> BlowOut_Displacement -> Recollection -> Love -> Emotion -> Matter.
+""".strip()
+
+
+def asymptotic_root(k: float) -> float:
+    """Positive characteristic root r_k = (1 + sqrt(1 + 4k)) / 2 for recurrence x_n = x_{n-1} + k*x_{n-2}."""
+    if k <= 0.0:
+        raise ValueError("Brood multiplier k must be greater than 0.")
+    return (1.0 + math.sqrt(1.0 + 4.0 * k)) / 2.0
+
+
+def negafibonacci(n: int) -> int:
+    """Exact Fibonacci value for any integer index n (positive, zero, or negative)."""
+    if n == 0:
+        return 0
+    if abs(n) == 1:
+        return 1
+    if n > 1:
+        a, b = 0, 1
+        for _ in range(2, n + 1):
+            a, b = b, a + b
+        return b
+    # For n < 0, let m = -n > 0; F_{-m} = (-1)^{m+1} * F_m
+    m = -n
+    fm = negafibonacci(m)
+    return fm if (m + 1) % 2 == 0 else -fm
+
+
+@dataclass(frozen=True)
+class State5D:
+    step: int
+    d1_magnitude: float
+    d2_delta: float
+    d3_pedal: str
+    d4_parity_gate: str
+    d5_regime: str
+    brood_unit: float
+    step_ratio: float
+    target_root: float
+
+
+def simulate_5d(
+    steps: int = 12,
+    seed_prev: float = 1.0,
+    seed_curr: float = 1.0,
+    brood_k: float = 4.0,
+    anomaly_shocks: dict[int, float] | None = None,
+    frenzy_threshold: float = 120.0,
+) -> list[State5D]:
+    """Simulate 5D state transitions across steps with brood multiplier k and anomaly jumps."""
+    if steps < 1:
+        raise ValueError("steps must be >= 1.")
+    root_k = asymptotic_root(brood_k)
+    shocks = anomaly_shocks if anomaly_shocks is not None else {4: 18.0, 8: -12.0}
+
+    prev_val = float(seed_prev)
+    curr_val = float(seed_curr)
+    rows: list[State5D] = []
+
+    for t in range(1, steps + 1):
+        shock = shocks.get(t, 0.0)
+        high_drive = abs(curr_val) >= frenzy_threshold or abs(shock) >= 10.0
+
+        # D3: Pedaling vector selection
+        if shock != 0.0:
+            pedal = "DIAG"
+            candidate = curr_val + (brood_k * prev_val) + shock
+        elif high_drive and t % 3 == 0:
+            pedal = "BWD"
+            unwind = float(negafibonacci(min(t, 6)))
+            candidate = abs(curr_val - prev_val - unwind)
+        else:
+            pedal = "FWD"
+            candidate = curr_val + (brood_k * prev_val)
+
+        # Keep inside bounded interior [1.0, GOOGOL]
+        next_val = max(1.0, min(float(GOOGOL), candidate))
+        delta = next_val - curr_val
+        ratio = next_val / max(1.0, curr_val)
+
+        # D4: Parity & Record Switch ("amnesia gate" flips OFF during acute frenzy/shock)
+        parity = "ODD" if int(round(next_val)) % 2 == 1 else "EVEN"
+        gate = "REC_OFF" if high_drive else "REC_ON"
+        d4_label = f"{parity}|{gate}"
+
+        # D5: Regime cycle progression
+        if shock != 0.0 or (high_drive and pedal != "BWD"):
+            regime = "Frenzy"
+        elif pedal == "BWD":
+            regime = "BlowOut_Displacement"
+        else:
+            regime = REGIMES[2 + ((t - 1) % 4)]  # Recollection -> Love -> Emotion -> Matter
+
+        rows.append(
+            State5D(
+                step=t,
+                d1_magnitude=next_val,
+                d2_delta=delta,
+                d3_pedal=pedal,
+                d4_parity_gate=d4_label,
+                d5_regime=regime,
+                brood_unit=next_val / brood_k,
+                step_ratio=ratio,
+                target_root=root_k,
+            )
+        )
+        prev_val, curr_val = curr_val, next_val
+
+    return rows
+
+
+def render_5d_table(title: str, rows: list[State5D]) -> str:
+    """Format a 5D state trajectory with a compact visual phase bar."""
+    header = (
+        f"\n=== {title} ===\n"
+        "t  | D1_Mag       | D2_Delta     | D3   | D4_Parity_Gate | D5_Regime          | Brood_u   | Ratio(r_k)  | Lattice\n"
+        + "-" * 118
+    )
+    lines = [header]
+    for r in rows:
+        glyph = REGIME_GLYPHS.get(r.d5_regime, "*")
+        bar_len = max(1, min(10, int(math.log10(max(1.0, r.brood_unit)) * 3) + 2))
+        bar = glyph * bar_len
+        lines.append(
+            f"{r.step:02d} | {r.d1_magnitude:12.2f} | {r.d2_delta:+12.2f} | "
+            f"{r.d3_pedal:4s} | {r.d4_parity_gate:14s} | {r.d5_regime:20s} | "
+            f"{r.brood_unit:9.3f} | {r.step_ratio:5.2f}({r.target_root:4.2f}) | {bar}"
+        )
+    return "\n".join(lines)
+
+
+def verify_all_invariants() -> None:
+    """Verify arithmetic truths, golden ratio identity, negafibonacci symmetry, and simulation outputs."""
+    # 1. Basic arithmetic & golden ratio check
+    assert 1 + 1 == 2
+    assert abs((PHI ** 2) - (PHI + 1.0)) < 1e-12
+    assert math.isclose(asymptotic_root(1.0), PHI, rel_tol=1e-12)
+
+    # 2. Negafibonacci checks: F_{-1}=1, F_{-2}=-1, F_{-3}=2, F_{-4}=-3, F_{-5}=5
+    assert [negafibonacci(i) for i in range(-5, 6)] == [5, -3, 2, -1, 1, 0, 1, 1, 2, 3, 5]
+
+    # 3. Simulation smoke checks across low brood (k=4) and high hatch (k=250)
+    low_rows = simulate_5d(steps=8, brood_k=4.0, frenzy_threshold=80.0)
+    high_rows = simulate_5d(steps=8, brood_k=250.0, frenzy_threshold=50000.0)
+    assert len(low_rows) == 8 and len(high_rows) == 8
+    assert all(1.0 <= r.d1_magnitude <= float(GOOGOL) for r in low_rows + high_rows)
+
+
+def main() -> None:
+    verify_all_invariants()
+    print(OVERVIEW_NOTES)
+    low_brood = simulate_5d(steps=10, brood_k=4.0, frenzy_threshold=90.0)
+    high_hatch = simulate_5d(steps=10, brood_k=250.0, frenzy_threshold=80000.0)
+    print(render_5d_table("Small Brood / Litter Scale (k=4)", low_brood))
+    print(render_5d_table("High Hatch / Spawn Scale (k=250)", high_hatch))
+
+
+if __name__ == "__main__":
+    main()
