@@ -1,0 +1,60 @@
+# Author/Watermark: Justin Ronald Moser
+# Soul Marble Retrofit FSM: non-negative pull, unified push, shear & dissolution
+
+import math
+
+PULL, PUSH, SHEAR, DISSOLVE = "PULL", "PUSH", "SHEAR", "DISSOLVE"
+
+
+class Marble:
+
+  def __init__(self, mid, x, y, vx, vy, phase=0.0):
+    self.id, self.x, self.y = mid, x, y
+    self.vx, self.vy, self.phase = vx, vy, phase
+    self.dissolution, self.state = 0.0, PULL
+
+  def step(self, others, dt=0.1):
+    # Non-negative hyper pull toward unification (0, 0)
+    r = math.hypot(self.x, self.y) + 1e-6
+    ax, ay = -1.35 * self.x / r, -1.35 * self.y / r
+    # Single unified push-away force (radial + swirl)
+    push = 0.65 / (1.0 + 0.25 * r * r)
+    ax += push * (self.x / r - 0.5 * self.y / r)
+    ay += push * (self.y / r + 0.5 * self.x / r)
+    bumps = 0
+    for o in others:
+      if o is self:
+        continue
+      dx, dy = o.x - self.x, o.y - self.y
+      d = math.hypot(dx, dy) + 1e-6
+      if d < 1.2:  # "Bumping shoulders" + shear force
+        bumps += 1
+        tx, ty = -dy / d, dx / d
+        shear = 0.55 * (1.0 - d / 1.2)
+        ax += tx * shear + 0.2 * dx / d
+        ay += ty * shear + 0.2 * dy / d
+        self.dissolution = min(1.0, self.dissolution + 0.06)
+    self.vx = 0.92 * (self.vx + ax * dt)
+    self.vy = 0.92 * (self.vy + ay * dt)
+    self.x += self.vx * dt
+    self.y += self.vy * dt
+    self.phase = (self.phase + 0.12 * dt) % (2 * math.pi)
+    if self.dissolution >= 0.85 or r < 0.25:
+      self.state, self.x, self.y, self.dissolution = DISSOLVE, 0.0, 0.0, 0.0
+    elif bumps:
+      self.state = SHEAR
+    elif push > 0.35:
+      self.state = PUSH
+    else:
+      self.state = PULL
+
+
+ms = [
+    Marble(i, math.cos(i) * 2.2, math.sin(i) * 2.2, -0.4 * math.sin(i), 0.4 * math.cos(i))
+    for i in range(6)
+]
+for t in range(15):
+  for m in ms:
+    m.step(ms)
+print([(m.id, m.state, round(m.phase, 2)) for m in ms])
+# Watermark: Justin Ronald Moser
