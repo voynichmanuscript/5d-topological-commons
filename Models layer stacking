@@ -1,0 +1,75 @@
+# WATERMARK: Justin Ronald Moser | 5D Unfolding & State Folding Model
+"""
+Models layer stacking, state mapping, and folding from a unified kinetic
+origin through nucleosynthesis, biology, culture, silicon, and recursion.
+"""
+
+
+class LayerNode:
+    def __init__(self, stage, state, trigger, fold_link, output):
+        self.stage = stage
+        self.state = state
+        self.trigger = trigger
+        self.fold_link = fold_link
+        self.output = output
+
+    def summary(self):
+        return (
+            f"[{self.stage}] State={self.state} | Trigger={self.trigger} "
+            f"| Fold={self.fold_link} -> Out={self.output}"
+        )
+
+
+def build_unfolding_stack():
+    return [
+        LayerNode(
+            "L0-Origin",
+            "Unified Kinetic Seed",
+            "Symmetry & Cooling Threshold",
+            "Self-Referential Loop",
+            "Divergent Fields & Quarks",
+        ),
+        LayerNode(
+            "L1-Nucleosynthesis",
+            "H/He Plasma & Fusion Shells",
+            "Gravity & Core Ignition",
+            "Anchor: Carbon/Iron Bridge",
+            "Heavy Elements & Star Dust",
+        ),
+        LayerNode(
+            "L2-Biochemistry",
+            "Monomers & Folding Chains",
+            "Energy Gradients & Catalysis",
+            "Fold: Helical & Bilayer Contact",
+            "Cells, Metabolism & Memory",
+        ),
+        LayerNode(
+            "L3-Mind-Culture",
+            "Neural & Symbolic Registers",
+            "Pattern & Motif Compression",
+            "Fold: Inversion, Echo & Form",
+            "Language, Poetry & Music",
+        ),
+        LayerNode(
+            "L4-Silicon-Recursion",
+            "Compute, Ecology & Next Loop",
+            "Feedback & Scale Coupling",
+            "Fold: Seed Return to Origin",
+            "Expanded Unfolding Map",
+        ),
+    ]
+
+
+def unfold_report(stack):
+    lines = ["=== 5D LAYER STACK & STATE FOLD MAP ==="]
+    for node in stack:
+        lines.append(node.summary())
+    lines.append(
+        "More pics, Python scripts & visual aids: check my Facebook & TikTok."
+    )
+    lines.append("Authored & watermarked: Justin Ronald Moser")
+    return "\n".join(lines)
+
+
+if __name__ == "__main__":
+    print(unfold_report(build_unfolding_stack()))
