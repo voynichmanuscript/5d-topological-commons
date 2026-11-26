@@ -1,0 +1,278 @@
+# ==============================================================================
+# ORIGIN & INTELLECTUAL PROPERTY ATTRIBUTION
+# Author: Justin Ronald Moser
+# Organization: Moser Building & Carpentry LLC
+# System: 5-Stage Regenerative Engineering & Fluid-Thermal Simulation Suite
+# Dependencies: Python 3 Standard Library Only (Zero External Packages)
+# ==============================================================================
+
+import math
+
+
+def sim_water_polishing_train(
+    flow_lps=2.5,
+    chamber_radius_m=0.25,
+    inlet_radius_m=0.04,
+    grit_density=2650.0,
+    particle_d_m=0.00015,
+    bed_depth_m=0.60,
+    bed_porosity=0.42,
+    clog_factor=0.0,
+):
+    """
+    1. Passive Water Polishing Train
+    Models tangential vortex grit settling, biochar/sand bed filtration,
+    clogging/hydraulic head penalty, and washout risk.
+    """
+    water_density = 998.0
+    viscosity = 0.001002  # Pa*s at 20 C
+    g = 9.81
+
+    effective_porosity = max(0.08, bed_porosity * (1.0 - max(0.0, min(0.85, clog_factor))))
+    inlet_area = math.pi * (inlet_radius_m ** 2)
+    flow_m3s = flow_lps / 1000.0
+    tangential_v = flow_m3s / inlet_area
+
+    # Centrifugal acceleration at chamber wall: a_c = v_t^2 / r
+    centrifugal_accel = (tangential_v ** 2) / chamber_radius_m
+    centrifugal_g = centrifugal_accel / g
+
+    # Radial terminal drift velocity in centrifugal field (Stokes regime approximation)
+    v_radial = (
+        (grit_density - water_density) * (particle_d_m ** 2) * centrifugal_accel
+    ) / (18.0 * viscosity)
+
+    # Superficial vs. interstitial (pore) approach velocity through biochar/sand bed
+    bed_area_m2 = math.pi * (chamber_radius_m ** 2)
+    superficial_v = flow_m3s / bed_area_m2
+    pore_v = superficial_v / effective_porosity
+    pore_residence_s = (bed_depth_m * effective_porosity) / flow_m3s
+
+    # Higher interstitial velocity short-circuits capture and risks media fluidization/washout
+    washout_risk = pore_v > 0.015
+    capture_ratio = 1.0 - math.exp(-0.045 * pore_residence_s / max(0.002, pore_v * 100.0))
+    est_particulate_capture_pct = max(0.0, min(99.0, capture_ratio * 100.0))
+
+    # Simplified Ergun-style head-loss estimate across filter bed (meters of water)
+    grain_d_m = 0.0012
+    bed_head_loss_m = (
+        150.0
+        * ((1.0 - effective_porosity) ** 2)
+        * viscosity
+        * bed_depth_m
+        * superficial_v
+        / (water_density * g * (effective_porosity ** 3) * (grain_d_m ** 2))
+    )
+
+    return {
+        "tangential_velocity_ms": round(tangential_v, 3),
+        "centrifugal_g_force": round(centrifugal_g, 3),
+        "grit_radial_drift_mms": round(v_radial * 1000.0, 2),
+        "pore_velocity_mms": round(pore_v * 1000.0, 2),
+        "biochar_bed_residence_s": round(pore_residence_s, 1),
+        "est_particulate_capture_pct": round(est_particulate_capture_pct, 1),
+        "est_bed_head_loss_m": round(bed_head_loss_m, 3),
+        "media_washout_risk": washout_risk,
+    }
+
+
+def sim_zero_power_dew_harvester(
+    panel_area_m2=4.0,
+    ambient_c=18.0,
+    rh_pct=78.0,
+    sky_cooling_wm2=65.0,
+    wind_speed_ms=0.5,
+    harvest_hours=8.0,
+):
+    """
+    2. Zero-Power Atmospheric Dew Harvester
+    Models night-sky radiative cooling, wind convective heating penalty,
+    dew point threshold, and grooved surface condensate collection.
+    """
+    rh_clamped = max(1.0, min(100.0, rh_pct))
+    a, b = 17.27, 237.7
+    alpha = ((a * ambient_c) / (b + ambient_c)) + math.log(rh_clamped / 100.0)
+    dew_point_c = (b * alpha) / (a - alpha)
+
+    # Convective heat transfer coefficient increases with wind speed (W/m^2*K)
+    h_conv = max(4.0, 5.7 + 3.8 * max(0.0, wind_speed_ms))
+
+    net_radiative_wm2 = max(0.0, sky_cooling_wm2)
+    panel_temp_c = ambient_c - (net_radiative_wm2 / h_conv)
+    subcooling_k = max(0.0, dew_point_c - panel_temp_c)
+
+    # Latent heat of vaporization of water (~2.465e6 J/kg)
+    latent_heat_j_kg = 2.465e6
+    if subcooling_k > 0.0:
+        condensation_flux_wm2 = min(net_radiative_wm2, h_conv * subcooling_k * 0.65)
+        liters_per_hour = (condensation_flux_wm2 * panel_area_m2 * 3600.0) / latent_heat_j_kg
+    else:
+        liters_per_hour = 0.0
+
+    # Micro-groove retention & drip loss leaves ~88% net collected water
+    collection_efficiency = 0.88
+    total_yield_liters = liters_per_hour * max(0.0, harvest_hours) * collection_efficiency
+
+    return {
+        "dew_point_c": round(dew_point_c, 2),
+        "panel_surface_c": round(panel_temp_c, 2),
+        "subcooling_margin_c": round(subcooling_k, 2),
+        "convective_h_wm2k": round(h_conv, 1),
+        "yield_liters_per_hr": round(liters_per_hour * collection_efficiency, 3),
+        "period_yield_liters": round(total_yield_liters, 2),
+    }
+
+
+def sim_earth_sheltered_structure(
+    wall_thickness_m=0.45,
+    earth_tube_len_m=18.0,
+    earth_tube_diam_m=0.15,
+    airflow_m3_hr=120.0,
+    outdoor_swing_c=16.0,
+    peak_ambient_c=30.0,
+    deep_ground_temp_c=11.5,
+):
+    """
+    3. Modular Earth-Sheltered Micro-Structure
+    Models 1D diurnal thermal wave damping through interlocking mass walls
+    and airflow-dependent earth-tube tempering.
+    """
+    diffusivity = 6.5e-7  # m^2/s for dense compressed earth / stone mass
+    period_s = 86400.0
+    damping_depth = math.sqrt((diffusivity * period_s) / math.pi)
+
+    decrement_factor = math.exp(-wall_thickness_m / damping_depth)
+    indoor_swing_c = outdoor_swing_c * decrement_factor
+    thermal_lag_hours = (wall_thickness_m / damping_depth) * (24.0 / (2.0 * math.pi))
+
+    flow_m3_s = max(0.001, airflow_m3_hr / 3600.0)
+    circumference_m = math.pi * earth_tube_diam_m
+    conv_coeff_approx = 12.0  # W/m^2*K rough tube-air boundary coefficient
+    air_rho_cp = 1200.0  # J/(m^3*K)
+    ntu = (conv_coeff_approx * circumference_m * earth_tube_len_m) / (flow_m3_s * air_rho_cp)
+    effectiveness = 1.0 - math.exp(-ntu)
+
+    tempered_supply_c = peak_ambient_c - effectiveness * (peak_ambient_c - deep_ground_temp_c)
+    tube_condensation_risk = peak_ambient_c > (deep_ground_temp_c + 6.0)
+
+    return {
+        "damping_depth_m": round(damping_depth, 3),
+        "indoor_temp_swing_c": round(indoor_swing_c, 2),
+        "thermal_phase_lag_hr": round(thermal_lag_hours, 1),
+        "earth_tube_ntu": round(ntu, 2),
+        "earth_tube_outlet_c": round(tempered_supply_c, 2),
+        "peak_cooling_drop_c": round(peak_ambient_c - tempered_supply_c, 2),
+        "tube_condensation_risk": tube_condensation_risk,
+    }
+
+
+def sim_tlud_biochar_reactor(
+    biomass_kg=12.0,
+    moisture_pct=12.0,
+    biochar_yield_frac=0.22,
+    syngas_lhv_mj_kg=13.5,
+    burner_thermal_eff=0.65,
+):
+    """
+    4. Biochar + Fungal Soil-Rebuilding TLUD Reactor
+    Takes total as-received biomass_kg and moisture_pct, computes dry mass,
+    moisture evaporation penalty, biochar output, and net usable heat.
+    """
+    m_frac = max(0.0, min(0.75, moisture_pct / 100.0))
+    water_kg = biomass_kg * m_frac
+    dry_matter_kg = biomass_kg - water_kg
+
+    biochar_kg = dry_matter_kg * biochar_yield_frac
+    volatiles_kg = max(0.0, dry_matter_kg - biochar_kg)
+
+    gross_volatile_mj = volatiles_kg * syngas_lhv_mj_kg
+    moisture_evap_mj = water_kg * 2.26  # ~2.26 MJ/kg latent heat of water
+    net_gas_mj = max(0.0, gross_volatile_mj - moisture_evap_mj)
+    usable_heat_kwh = (net_gas_mj * burner_thermal_eff) / 3.6
+
+    # Conservative carbon sequestration (~75% fixed carbon in biochar * 3.67 CO2/C)
+    co2_sequestered_kg = biochar_kg * 0.75 * 3.67
+    high_moisture_warning = moisture_pct > 25.0
+
+    return {
+        "as_received_biomass_kg": round(biomass_kg, 2),
+        "dry_wood_mass_kg": round(dry_matter_kg, 2),
+        "moisture_evap_loss_mj": round(moisture_evap_mj, 2),
+        "biochar_output_kg": round(biochar_kg, 2),
+        "usable_heat_kwh": round(usable_heat_kwh, 2),
+        "co2_locked_in_soil_kg": round(co2_sequestered_kg, 2),
+        "high_moisture_warning": high_moisture_warning,
+    }
+
+
+def sim_low_head_river_retrofit(
+    head_m=1.4,
+    total_flow_m3s=0.85,
+    bypass_fraction=0.12,
+    head_loss_m=0.12,
+    wire_to_water_eff=0.52,
+):
+    """
+    5. Low-Head River & Culvert Micro-Retrofit
+    Models debris bypass split, net available head after intake/trash-rack losses,
+    realistic micro-hydro wire-to-water power, and tailrace aeration.
+    """
+    rho = 998.0
+    g = 9.81
+    clean_flow_m3s = total_flow_m3s * (1.0 - max(0.0, min(0.8, bypass_fraction)))
+    net_head_m = max(0.0, head_m - head_loss_m)
+
+    electrical_watts = rho * g * clean_flow_m3s * net_head_m * wire_to_water_eff
+    daily_kwh = (electrical_watts * 24.0) / 1000.0
+    do_boost_mgl = 1.45 * math.sqrt(net_head_m) if net_head_m > 0 else 0.0
+
+    return {
+        "clean_turbine_flow_m3s": round(clean_flow_m3s, 3),
+        "net_head_m": round(net_head_m, 2),
+        "continuous_power_w": round(electrical_watts, 1),
+        "daily_energy_kwh": round(daily_kwh, 2),
+        "tailrace_oxygen_boost_mgl": round(do_boost_mgl, 2),
+    }
+
+
+def run_scenarios():
+    scenarios = {
+        "NOMINAL": {
+            "water": sim_water_polishing_train(),
+            "dew": sim_zero_power_dew_harvester(),
+            "earth": sim_earth_sheltered_structure(),
+            "tlud": sim_tlud_biochar_reactor(),
+            "hydro": sim_low_head_river_retrofit(),
+        },
+        "OFF_DESIGN_WORST_CASE": {
+            "water": sim_water_polishing_train(flow_lps=6.5, clog_factor=0.55),
+            "dew": sim_zero_power_dew_harvester(
+                ambient_c=22.0, rh_pct=55.0, sky_cooling_wm2=20.0, wind_speed_ms=3.5
+            ),
+            "earth": sim_earth_sheltered_structure(
+                wall_thickness_m=0.25, airflow_m3_hr=260.0, outdoor_swing_c=20.0, peak_ambient_c=35.0
+            ),
+            "tlud": sim_tlud_biochar_reactor(
+                biomass_kg=12.0, moisture_pct=32.0, burner_thermal_eff=0.45
+            ),
+            "hydro": sim_low_head_river_retrofit(
+                head_m=1.1,
+                total_flow_m3s=0.22,
+                bypass_fraction=0.20,
+                head_loss_m=0.22,
+                wire_to_water_eff=0.42,
+            ),
+        },
+    }
+
+    for mode, results in scenarios.items():
+        print("=" * 68)
+        print(f" SCENARIO: {mode}")
+        print("=" * 68)
+        for sys_name, metrics in results.items():
+            print(f"[{sys_name.upper()}] -> {metrics}")
+        print()
+
+
+if __name__ == "__main__":
+    run_scenarios()
