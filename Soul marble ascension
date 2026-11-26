@@ -1,0 +1,253 @@
+"""
+Origin: Justin Ronald Moser | Moser Building & Carpentry LLC
+Model: Topological Agency — Soul Marble Ascension, Satisfaction Loop,
+       Tens-System Combination Keys, Rhythm/Differential Drive & Coupling
+"""
+
+from __future__ import annotations
+
+import json
+import math
+import random
+from dataclasses import dataclass, field
+from typing import Dict, List, Optional, Tuple
+
+
+# Base-10 reference anchors and shifted combination keys from the field notes
+TENS_ANCHORS: Tuple[int, ...] = (10, 20, 30, 50, 60, 90, 100, 130, 150, 210, 240)
+COMBINATION_KEYS: Tuple[int, ...] = (
+    101, 29, 57, 136, 131, 158, 59, 127, 239, 211,
+    8928, 536, 43590, 96876, 29351, 1063,
+    3642, 1281, 7911, 1381641, 96200795, 41069343, 28627491, 673294638,
+)
+
+
+def clamp(value: float, low: float, high: float) -> float:
+    """Restrict value to [low, high]."""
+    return max(low, min(high, value))
+
+
+def tens_proximity_factor(key: int) -> float:
+    """Measure how near a combination key sits to its nearest tens-system anchor."""
+    nearest = min(TENS_ANCHORS, key=lambda anchor: abs(key - anchor))
+    delta = abs(key - nearest)
+    return 1.0 / (1.0 + (delta / 25.0))
+
+
+@dataclass
+class AgentState:
+    """State of a single finite-state topological agent."""
+
+    agent_id: int
+    form: str = "MARBLE"              # "MARBLE" (passive sphere) or "5-APPENDAGE" (contorted climber)
+    phase: str = "EQUILIBRIUM"        # "EQUILIBRIUM", "SEEKING", "CONSOLIDATING", "ESCALATING", "PHASE_FLIP"
+    height: float = 0.0               # Altitude / progress up the entropy slope [0.0, 20.0]
+    satisfaction: float = 0.25        # Internal need fulfillment [0.0, 1.0]
+    tension: float = 0.15             # Accumulated deficit / stress [0.0, 2.0]
+    prev_height: float = 0.0          # Prior step height for 100% differential tracking
+    key_index: int = 0                # Pointer into COMBINATION_KEYS
+    coupled_with: Optional[int] = None
+    climbs_completed: int = 0
+    history: List[Dict[str, object]] = field(default_factory=list)
+
+    def differential_jump(self) -> float:
+        """Compute raw step-to-step change (100% differential signal)."""
+        return round(self.height - self.prev_height, 4)
+
+
+@dataclass
+class EnvironmentConfig:
+    """Parameters governing the slope, satisfaction threshold, and coupling."""
+
+    steps: int = 12
+    num_agents: int = 4
+    seed: int = 42
+    satisfaction_threshold: float = 0.75
+    tension_bifurcation_limit: float = 1.15
+    gravity_pull: float = 0.14
+    coupling_radius: float = 1.6
+    rhythm_period: int = 3
+
+
+class TopologicalAgencyEngine:
+    """Simulates soul marbles contorting into 5-appendage forms to climb against entropy."""
+
+    def __init__(self, config: Optional[EnvironmentConfig] = None) -> None:
+        self.config = config or EnvironmentConfig()
+        self.rng = random.Random(self.config.seed)
+        self.agents: List[AgentState] = []
+        self._init_agents()
+
+    def _init_agents(self) -> None:
+        """Initialize agents with non-repeating shifted starting bounds."""
+        self.agents.clear()
+        for idx in range(self.config.num_agents):
+            key_pos = (idx * 3 + self.rng.randint(0, 2)) % len(COMBINATION_KEYS)
+            raw_key = COMBINATION_KEYS[key_pos]
+            offset = self.rng.uniform(-0.12, 0.14)
+            start_sat = clamp(0.25 + offset + 0.1 * (idx % 3), 0.05, 0.65)
+            start_h = clamp(0.20 + (tens_proximity_factor(raw_key) * 0.8), 0.0, 2.0)
+            self.agents.append(
+                AgentState(
+                    agent_id=idx,
+                    height=round(start_h, 4),
+                    prev_height=round(start_h, 4),
+                    satisfaction=round(start_sat, 4),
+                    tension=round(clamp(0.45 - start_sat * 0.3, 0.05, 0.9), 4),
+                    key_index=key_pos,
+                )
+            )
+
+    def _update_couplings(self) -> None:
+        """Pair nearby agents ('holding hands' / rubbing shoulders) when heights align."""
+        for agent in self.agents:
+            agent.coupled_with = None
+
+        used: set[int] = set()
+        for i, a in enumerate(self.agents):
+            if i in used:
+                continue
+            best_j: Optional[int] = None
+            best_diff = self.config.coupling_radius
+            for j, b in enumerate(self.agents):
+                if i == j or j in used:
+                    continue
+                diff = abs(a.height - b.height)
+                if diff <= best_diff:
+                    best_diff = diff
+                    best_j = j
+            if best_j is not None:
+                a.coupled_with = best_j
+                self.agents[best_j].coupled_with = i
+                used.add(i)
+                used.add(best_j)
+
+    def _step_agent(self, agent: AgentState, tick: int) -> Dict[str, object]:
+        """Advance a single agent through need check, contortion, climb, and state transition."""
+        agent.prev_height = agent.height
+
+        # Unlock next combination key using lower/above shift to prevent repeated starting points
+        shift = self.rng.choice((-2, -1, 1, 2, 3))
+        agent.key_index = (agent.key_index + shift) % len(COMBINATION_KEYS)
+        active_key = COMBINATION_KEYS[agent.key_index]
+        key_boost = 0.08 * tens_proximity_factor(active_key)
+
+        # Rhythm (periodic pulse) vs. 100% differential (unpredictable resource/shock input)
+        in_rhythm = (tick % self.config.rhythm_period) == 0
+        rhythm_pulse = 0.14 if in_rhythm else 0.04
+        krill_intake = clamp(self.rng.uniform(0.05, 0.42) + rhythm_pulse + key_boost, 0.0, 0.75)
+        shock_load = self.rng.uniform(0.02, 0.24)
+
+        # Shared grip ('holding hands') reduces drag and stabilizes climbing
+        partner_bonus = 0.09 if agent.coupled_with is not None else 0.0
+        peer_drag = max(0.0, 0.03 * (self.config.num_agents - 1) - partner_bonus)
+
+        # Satisfaction check: if met -> rest/consolidate as marble; else -> contort into 5-appendage form
+        satisfied = agent.satisfaction >= self.config.satisfaction_threshold
+
+        if satisfied:
+            agent.form = "MARBLE"
+            agent.phase = "CONSOLIDATING"
+            # Gentle gravity drift while resting; satisfaction slowly decays toward next deficit
+            agent.height = clamp(agent.height - self.config.gravity_pull * 0.45 + partner_bonus * 0.2, 0.0, 20.0)
+            agent.satisfaction = clamp(agent.satisfaction - 0.12 - shock_load * 0.15, 0.0, 1.0)
+            agent.tension = clamp(agent.tension - 0.18, 0.0, 2.0)
+        else:
+            agent.form = "5-APPENDAGE"
+            # Five appendages provide leverage: base grip + krill energy + coupling minus entropy & shock
+            appendage_leverage = 0.34 + rhythm_pulse + key_boost + partner_bonus
+            net_ascent = appendage_leverage + (krill_intake * 0.55) - (self.config.gravity_pull + shock_load + peer_drag)
+
+            if net_ascent >= 0.0:
+                agent.height = clamp(agent.height + net_ascent, 0.0, 20.0)
+                agent.satisfaction = clamp(agent.satisfaction + krill_intake * 0.65, 0.0, 1.0)
+                agent.tension = clamp(agent.tension + shock_load * 0.4 - krill_intake * 0.25, 0.0, 2.0)
+                agent.phase = "SEEKING"
+                if agent.height >= 10.0 and agent.differential_jump() > 0.0:
+                    agent.climbs_completed += 1
+            else:
+                # Unmet deficit pushes tension upward toward bifurcation threshold
+                agent.height = clamp(agent.height + net_ascent * 0.5, 0.0, 20.0)
+                agent.satisfaction = clamp(agent.satisfaction + krill_intake * 0.25 - shock_load * 0.3, 0.0, 1.0)
+                agent.tension = clamp(agent.tension + shock_load + abs(net_ascent) * 0.6, 0.0, 2.0)
+                agent.phase = "ESCALATING"
+
+        # Bifurcation / phase-flip check when tension crosses threshold
+        if agent.tension >= self.config.tension_bifurcation_limit:
+            agent.phase = "PHASE_FLIP"
+            if agent.satisfaction >= 0.45 or in_rhythm:
+                # Transmutation toward higher ground / equilibrium reset
+                agent.height = clamp(agent.height + 0.65, 0.0, 20.0)
+                agent.tension = 0.25
+                agent.satisfaction = clamp(agent.satisfaction + 0.20, 0.0, 1.0)
+            else:
+                # Entropic slip back down slope with tension release
+                agent.height = clamp(agent.height - 0.85, 0.0, 20.0)
+                agent.tension = 0.55
+
+        record: Dict[str, object] = {
+            "tick": tick,
+            "agent_id": agent.agent_id,
+            "form": agent.form,
+            "phase": agent.phase,
+            "key": active_key,
+            "rhythm": in_rhythm,
+            "coupled_with": agent.coupled_with,
+            "height": round(agent.height, 3),
+            "delta_h": agent.differential_jump(),
+            "satisfaction": round(agent.satisfaction, 3),
+            "tension": round(agent.tension, 3),
+        }
+        agent.history.append(record)
+        return record
+
+    def run(self) -> List[List[Dict[str, object]]]:
+        """Execute the full multi-step simulation and return per-tick records."""
+        all_ticks: List[List[Dict[str, object]]] = []
+        for tick in range(1, self.config.steps + 1):
+            self._update_couplings()
+            tick_records = [self._step_agent(agent, tick) for agent in self.agents]
+            all_ticks.append(tick_records)
+        return all_ticks
+
+    def summary(self) -> Dict[str, object]:
+        """Compute aggregate metrics across all agents."""
+        mean_h = sum(a.height for a in self.agents) / max(1, len(self.agents))
+        mean_sat = sum(a.satisfaction for a in self.agents) / max(1, len(self.agents))
+        mean_ten = sum(a.tension for a in self.agents) / max(1, len(self.agents))
+        spread_h = math.sqrt(
+            sum((a.height - mean_h) ** 2 for a in self.agents) / max(1, len(self.agents))
+        )
+        return {
+            "agents": len(self.agents),
+            "mean_height": round(mean_h, 3),
+            "height_dispersion": round(spread_h, 3),
+            "mean_satisfaction": round(mean_sat, 3),
+            "mean_tension": round(mean_ten, 3),
+        }
+
+
+def main() -> None:
+    engine = TopologicalAgencyEngine(
+        EnvironmentConfig(steps=8, num_agents=4, seed=42)
+    )
+    ticks = engine.run()
+
+    for tick_rows in ticks:
+        t = tick_rows[0]["tick"]
+        mode = "RHYTHM" if tick_rows[0]["rhythm"] else "DIFF"
+        parts = []
+        for row in tick_rows:
+            link = f"~U{row['coupled_with']}" if row["coupled_with"] is not None else "solo"
+            parts.append(
+                f"U{row['agent_id']}[{row['form']},{row['phase']},{link}]:"
+                f"h={row['height']}(dh={row['delta_h']:+.2f}),"
+                f"sat={row['satisfaction']},ten={row['tension']},k={row['key']}"
+            )
+        print(f"T{t:02d} ({mode}): " + " | ".join(parts))
+
+    print("\nSUMMARY:", json.dumps(engine.summary(), indent=2))
+
+
+if __name__ == "__main__":
+    main()
