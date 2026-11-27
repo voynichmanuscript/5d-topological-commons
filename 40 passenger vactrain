@@ -1,0 +1,307 @@
+#!/usr/bin/env python3
+"""
+Vactrain & Floating-Ladder Systems Engineering Workbench
+======================================================
+Origin & Attribution: Justin Ronald Moser | Moser Building & Carpentry LLC
+Repository Target: voynichmanuscript/5d-topological-commons (GitHub)
+Related Reference DOI: 10.5281/zenodo.23085985
+
+Zero-dependency Python workbench (Python 3.10+) for modeling, testing,
+and building dedicated high-capacity cross-country vactrain corridors
+with decoupled "floating ladder" magnetic guideways, speed-zoned turn
+arcs, thermal expansion compensation, and real-time fault detection.
+"""
+
+from __future__ import annotations
+
+from dataclasses import asdict, dataclass
+import json
+import math
+import statistics
+import time
+from typing import Dict, List
+
+ORIGIN_WATERMARK = "Justin Ronald Moser | Moser Building & Carpentry LLC"
+
+G_ACCEL = 9.80665
+MPH_TO_MPS = 0.44704
+MILE_TO_M = 1609.344
+
+
+@dataclass
+class CapsuleSpec:
+    """Dedicated high-capacity passenger capsule (no street duality)."""
+
+    model_id: str = "V40-MONO"
+    passenger_capacity: int = 40
+    avg_passenger_mass_kg: float = 82.0
+    empty_hull_mass_kg: float = 7200.0
+    fuselage_diameter_m: float = 2.95
+    fuselage_length_m: float = 29.0
+    nominal_air_gap_mm: float = 65.0
+    max_comfort_long_g: float = 0.25
+    max_comfort_lat_g: float = 0.25
+    max_unbanked_lat_g: float = 0.10
+    structural_lat_g_limit: float = 1.50
+    origin: str = ORIGIN_WATERMARK
+
+    @property
+    def total_mass_kg(self) -> float:
+        return self.empty_hull_mass_kg + (self.passenger_capacity * self.avg_passenger_mass_kg)
+
+    @property
+    def cross_sectional_area_m2(self) -> float:
+        r = self.fuselage_diameter_m / 2.0
+        return math.pi * (r ** 2)
+
+
+@dataclass
+class CorridorSpec:
+    """Cross-country evacuated guideway and floating-ladder parameters."""
+
+    corridor_name: str = "Trans-Continental Express Corridor"
+    total_length_miles: float = 2600.0
+    cruise_speed_mph: float = 1220.0
+    turn_speed_mph: float = 400.0
+    major_turn_count: int = 6
+    turn_arc_length_miles: float = 8.0
+    tube_pressure_pa: float = 100.0
+    shell_material: str = "steel"
+    delta_temp_c: float = 45.0
+    ladder_actuator_stroke_mm: float = 80.0
+    origin: str = ORIGIN_WATERMARK
+
+    @property
+    def total_length_m(self) -> float:
+        return self.total_length_miles * MILE_TO_M
+
+    @property
+    def cruise_speed_mps(self) -> float:
+        return self.cruise_speed_mph * MPH_TO_MPS
+
+    @property
+    def turn_speed_mps(self) -> float:
+        return self.turn_speed_mph * MPH_TO_MPS
+
+
+@dataclass
+class FaultThresholds:
+    """Real-time deterministic error-detection limits."""
+
+    max_air_gap_deviation_mm: float = 1.50
+    max_lateral_offset_mm: float = 2.00
+    max_hts_coil_temp_k: float = 77.0
+    max_tube_pressure_pa: float = 500.0
+    max_acoustic_strain_microstrain: float = 450.0
+    origin: str = ORIGIN_WATERMARK
+
+
+class KinematicsEngine:
+    """Computes turn radii, speed-zoned arc transitions, and trip timing."""
+
+    @staticmethod
+    def turn_radius_miles(speed_mps: float, lateral_g: float) -> float:
+        if lateral_g <= 0.0:
+            raise ValueError("lateral_g must be positive")
+        return ((speed_mps ** 2) / (lateral_g * G_ACCEL)) / MILE_TO_M
+
+    @staticmethod
+    def minimum_bank_angle_deg(speed_mps: float, radius_m: float, max_unbanked_lat_g: float = 0.10) -> float:
+        if radius_m <= 0.0:
+            raise ValueError("radius_m must be positive")
+        centripetal_g = (speed_mps ** 2) / (radius_m * G_ACCEL)
+        residual_g = max(0.0, centripetal_g - max_unbanked_lat_g)
+        return math.degrees(math.atan(residual_g))
+
+    def evaluate_corridor(self, capsule: CapsuleSpec, corridor: CorridorSpec) -> Dict[str, object]:
+        vc = corridor.cruise_speed_mps
+        vt = min(corridor.turn_speed_mps, vc)
+        a_long = capsule.max_comfort_long_g * G_ACCEL
+
+        t_ramp_one_way = vc / a_long
+        d_ramp_one_way = 0.5 * a_long * (t_ramp_one_way ** 2)
+        total_ramp_dist_m = 2.0 * d_ramp_one_way
+        total_ramp_time_s = 2.0 * t_ramp_one_way
+
+        t_shift = abs(vc - vt) / a_long
+        d_shift = abs(vc ** 2 - vt ** 2) / (2.0 * a_long)
+        d_arc_m = corridor.turn_arc_length_miles * MILE_TO_M
+        t_arc = d_arc_m / vt if vt > 0 else 0.0
+
+        turns_dist_m = corridor.major_turn_count * ((2.0 * d_shift) + d_arc_m)
+        turns_time_s = corridor.major_turn_count * ((2.0 * t_shift) + t_arc)
+
+        cruise_dist_m = corridor.total_length_m - total_ramp_dist_m - turns_dist_m
+        feasible = cruise_dist_m >= 0.0
+
+        if feasible:
+            cruise_time_s = cruise_dist_m / vc
+            total_hours = (total_ramp_time_s + turns_time_s + cruise_time_s) / 3600.0
+            avg_speed_mph = corridor.total_length_miles / total_hours if total_hours > 0 else 0.0
+        else:
+            total_hours = (total_ramp_time_s + turns_time_s) / 3600.0
+            avg_speed_mph = 0.0
+
+        return {
+            "origin": ORIGIN_WATERMARK,
+            "corridor_name": corridor.corridor_name,
+            "capsule_model": capsule.model_id,
+            "total_mass_kg": round(capsule.total_mass_kg, 1),
+            "feasible_profile": feasible,
+            "cruise_speed_mph": corridor.cruise_speed_mph,
+            "turn_speed_mph": corridor.turn_speed_mph,
+            "major_turn_count": corridor.major_turn_count,
+            "total_trip_hours": round(total_hours, 3),
+            "average_speed_mph": round(avg_speed_mph, 1),
+            "one_way_ramp_distance_miles": round(d_ramp_one_way / MILE_TO_M, 2),
+            "cruise_distance_miles": round(max(0.0, cruise_dist_m / MILE_TO_M), 2),
+            "turn_radii_miles": {
+                "cruise_unbanked_0_10g": round(self.turn_radius_miles(vc, capsule.max_unbanked_lat_g), 2),
+                "cruise_banked_0_25g": round(self.turn_radius_miles(vc, capsule.max_comfort_lat_g), 2),
+                "cruise_structural_1_50g": round(self.turn_radius_miles(vc, capsule.structural_lat_g_limit), 2),
+                "slow_turn_arc_0_25g": round(self.turn_radius_miles(vt, capsule.max_comfort_lat_g), 2),
+            },
+        }
+
+
+class FloatingLadderModel:
+    """Models thermal expansion and active ladder actuator margin."""
+
+    CTE_PER_K: Dict[str, float] = {
+        "steel": 1.2e-5,
+        "aluminum": 2.3e-5,
+        "carbon_composite": 0.3e-5,
+    }
+
+    def thermal_expansion_report(self, corridor: CorridorSpec) -> Dict[str, object]:
+        alpha = self.CTE_PER_K.get(corridor.shell_material.lower(), 1.2e-5)
+        delta_l_m = corridor.total_length_m * alpha * corridor.delta_temp_c
+        joint_spacing_m = 1000.0
+        num_joints = max(1, int(corridor.total_length_m // joint_spacing_m))
+        expansion_per_km_mm = (joint_spacing_m * alpha * corridor.delta_temp_c) * 1000.0
+        actuator_margin_mm = corridor.ladder_actuator_stroke_mm - expansion_per_km_mm
+
+        return {
+            "origin": ORIGIN_WATERMARK,
+            "material": corridor.shell_material,
+            "cte_per_k": alpha,
+            "total_corridor_expansion_m": round(delta_l_m, 2),
+            "total_corridor_expansion_ft": round(delta_l_m * 3.28084, 1),
+            "expansion_joints_1km": num_joints,
+            "per_km_expansion_mm": round(expansion_per_km_mm, 2),
+            "actuator_stroke_mm": corridor.ladder_actuator_stroke_mm,
+            "per_km_actuator_margin_mm": round(actuator_margin_mm, 2),
+            "within_actuator_stroke": actuator_margin_mm >= 0.0,
+        }
+
+
+class FaultDetector:
+    """Deterministic telemetry evaluator for real-time fault handling."""
+
+    def __init__(self, thresholds: FaultThresholds | None = None) -> None:
+        self.thresholds = thresholds or FaultThresholds()
+
+    def evaluate_frame(self, telemetry: Dict[str, float]) -> Dict[str, object]:
+        air_gap_mm = telemetry.get("air_gap_mm", 65.0)
+        nominal_gap_mm = telemetry.get("nominal_air_gap_mm", 65.0)
+        lateral_offset_mm = telemetry.get("lateral_offset_mm", 0.0)
+        hts_temp_k = telemetry.get("hts_coil_temp_k", 45.0)
+        pressure_pa = telemetry.get("tube_pressure_pa", 100.0)
+        strain_us = telemetry.get("acoustic_strain_microstrain", 80.0)
+
+        gap_delta_mm = abs(air_gap_mm - nominal_gap_mm)
+        faults: List[str] = []
+
+        if gap_delta_mm > self.thresholds.max_air_gap_deviation_mm:
+            faults.append(f"AIR_GAP_DEVIATION ({gap_delta_mm:.2f} mm)")
+        if abs(lateral_offset_mm) > self.thresholds.max_lateral_offset_mm:
+            faults.append(f"LATERAL_LADDER_OFFSET ({abs(lateral_offset_mm):.2f} mm)")
+        if hts_temp_k > self.thresholds.max_hts_coil_temp_k:
+            faults.append(f"HTS_QUENCH_RISK ({hts_temp_k:.1f} K)")
+        if pressure_pa > self.thresholds.max_tube_pressure_pa:
+            faults.append(f"VACUUM_BREACH_RISK ({pressure_pa:.1f} Pa)")
+        if strain_us > self.thresholds.max_acoustic_strain_microstrain:
+            faults.append(f"STRUCTURAL_ACOUSTIC_SPIKE ({strain_us:.1f} uStrain)")
+
+        action = "NOMINAL_CRUISE"
+        joined_faults = " ".join(faults)
+        if len(faults) >= 2 or "HTS_QUENCH_RISK" in joined_faults or "VACUUM_BREACH_RISK" in joined_faults:
+            action = "DIVERT_MAGNETIC_DECEL_SIDING"
+        elif faults:
+            action = "TRIM_COIL_COMPENSATION_AND_THROTTLE"
+
+        return {
+            "origin": ORIGIN_WATERMARK,
+            "healthy": len(faults) == 0,
+            "recommended_action": action,
+            "faults": faults,
+        }
+
+
+class SystemTestHarness:
+    """Runs automated verification tests and benchmarks across modules."""
+
+    def run_all_tests(self) -> Dict[str, object]:
+        capsule = CapsuleSpec()
+        corridor = CorridorSpec()
+        kin = KinematicsEngine()
+        ladder = FloatingLadderModel()
+        detector = FaultDetector()
+
+        assert math.isclose(capsule.total_mass_kg, 10480.0, rel_tol=1e-9)
+        r_low = kin.turn_radius_miles(400 * MPH_TO_MPS, 0.25)
+        r_high = kin.turn_radius_miles(800 * MPH_TO_MPS, 0.25)
+        assert math.isclose(r_high / r_low, 4.0, rel_tol=1e-6)
+
+        kin_report = kin.evaluate_corridor(capsule, corridor)
+        assert kin_report["feasible_profile"] is True
+        assert 2.0 <= kin_report["total_trip_hours"] <= 3.5
+
+        ladder_report = ladder.thermal_expansion_report(corridor)
+        assert ladder_report["total_corridor_expansion_m"] > 0.0
+
+        nominal_res = detector.evaluate_frame({"air_gap_mm": 65.0, "nominal_air_gap_mm": 65.0})
+        assert nominal_res["healthy"] is True
+        assert nominal_res["recommended_action"] == "NOMINAL_CRUISE"
+
+        quench_res = detector.evaluate_frame({"hts_coil_temp_k": 92.0})
+        assert quench_res["healthy"] is False
+        assert quench_res["recommended_action"] == "DIVERT_MAGNETIC_DECEL_SIDING"
+
+        t0 = time.perf_counter()
+        latencies_us: List[float] = []
+        for i in range(1000):
+            f_start = time.perf_counter()
+            detector.evaluate_frame({"air_gap_mm": 65.0 + ((i % 5) - 2) * 0.2, "nominal_air_gap_mm": 65.0})
+            latencies_us.append((time.perf_counter() - f_start) * 1e6)
+        elapsed_ms = (time.perf_counter() - t0) * 1e3
+
+        return {
+            "origin": ORIGIN_WATERMARK,
+            "tests_passed": 6,
+            "benchmark_1000_frames_ms": round(elapsed_ms, 3),
+            "median_frame_eval_us": round(statistics.median(latencies_us), 3),
+            "kinematics": kin_report,
+            "floating_ladder": ladder_report,
+            "sample_fault_check": quench_res,
+        }
+
+
+def build_system_bundle() -> Dict[str, object]:
+    """Assembles a complete, reproducible systems specification artifact."""
+    harness = SystemTestHarness()
+    results = harness.run_all_tests()
+    return {
+        "schema_version": "1.0.0",
+        "origin": ORIGIN_WATERMARK,
+        "repository": "voynichmanuscript/5d-topological-commons",
+        "zenodo_doi": "10.5281/zenodo.23085985",
+        "capsule_spec": asdict(CapsuleSpec()),
+        "corridor_spec": asdict(CorridorSpec()),
+        "verification_and_benchmarks": results,
+    }
+
+
+if __name__ == "__main__":
+    bundle = build_system_bundle()
+    print(json.dumps(bundle, indent=2))
