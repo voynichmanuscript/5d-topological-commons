@@ -1,0 +1,391 @@
+#!/usr/bin/env python3
+"""
+Master Vactrain & Floating-Ladder Systems Engineering Package (with Embedded README)
+================================================================================
+Origin & Attribution: Justin Ronald Moser | Moser Building & Carpentry LLC
+Repository: voynichmanuscript/5d-topological-commons
+Related DOI: 10.5281/zenodo.23085985
+
+Run this single-file master script to print the full README specification
+(--readme) or execute the complete systems engineering verification, multi-leg
+U.S. loop evaluator, round-trip "no get-off" scheduler, and JSON bundle builder.
+Zero external dependencies (Python 3.10+ standard library only).
+"""
+
+from __future__ import annotations
+
+import argparse
+from dataclasses import asdict, dataclass
+import json
+import math
+import statistics
+import sys
+import time
+from typing import Dict, List, Tuple
+
+ORIGIN_WATERMARK = "Justin Ronald Moser | Moser Building & Carpentry LLC"
+REPO_SLUG = "voynichmanuscript/5d-topological-commons"
+ZENODO_DOI = "10.5281/zenodo.23085985"
+
+G_ACCEL = 9.80665
+MPH_TO_MPS = 0.44704
+MILE_TO_M = 1609.344
+
+README_MARKDOWN = """# Dedicated 40-Person Vactrain & Floating-Ladder Loop Package
+
+**Origin:** Justin Ronald Moser | Moser Building & Carpentry LLC  
+**Repository:** `voynichmanuscript/5d-topological-commons`  
+**Reference DOI:** `10.5281/zenodo.23085985`
+
+## 1. Architecture & Design Pivot
+- **No Dual-Mode Street Duality:** Drops street-driving hardware, heavy low-speed suspension, and per-vehicle pressure airlocks.
+- **Dedicated 40-Passenger Capsule:** Streamlined carbon-titanium monocoque pressure vessel (~7,200 kg empty; ~10,480 kg with forty 82 kg passengers) launched via electronic platooning without wheels/bogies.
+- **Permanently Evacuated Guideway:** Outer vacuum shell (~100 Pa) paired with a decoupled **floating-ladder** Linear Synchronous Motor (LSM) stator track on active piezo-hydraulic bearings to absorb thermal expansion and ground shifts.
+- **Speed-Zoned Arcs & Boosts:** Regenerative braking into tighter geographical arcs (~400 mph on an ~8.1-mile banked radius at 0.25g) and LSM straightaway boosts up to ~1,100-1,220 mph within human comfort bounds (<=0.25g).
+
+## 2. Central-to-West-to-South U.S. Loop (~4,565 Miles)
+Route: **Chicago -> Denver -> Salt Lake City -> Los Angeles -> Phoenix -> Dallas -> St. Louis -> Chicago**.
+Chosen for long plains/interstate/public-land right-of-way stretches paired with real mountain passes, desert thermal swings, and river valleys.
+
+## 3. Terrain Stretches, Port Junctures & "No Get-Off" Loop Scheduling
+- **Terrain Zones:** Elevated pylons over plains, deep-bored tunnels/passes in mountain ranges, expansion-jointed shells in desert basins, and damped spans across river valleys.
+- **Port Junctures:** Zero-moving-part magnetic flux diversion onto deceleration sidings for stopping capsules while keeping non-stop through-lines clear; low-luggage/carry-on staging and seat-mass trim calibration.
+- **Round-Trip "No Get-Off" Mode:** Keeps a 40-person roster or continuous loop capsule running without mid-route transfers (~4.50 h active loop motion; ~4.75 h with a 15-minute origin turnaround).
+
+## 4. Usage
+- Print this README: `python3 master_vactrain_package.py --readme`
+- Run verification, loop schedule, and JSON bundle: `python3 master_vactrain_package.py`
+"""
+
+
+@dataclass
+class CapsuleSpec:
+    """Dedicated 40-passenger cross-country pressure capsule."""
+
+    model_id: str = "V40-MONO"
+    passenger_capacity: int = 40
+    avg_passenger_mass_kg: float = 82.0
+    empty_hull_mass_kg: float = 7200.0
+    fuselage_diameter_m: float = 2.95
+    fuselage_length_m: float = 29.0
+    nominal_air_gap_mm: float = 65.0
+    max_comfort_long_g: float = 0.25
+    max_comfort_lat_g: float = 0.25
+    max_unbanked_lat_g: float = 0.10
+    structural_lat_g_limit: float = 1.50
+    origin: str = ORIGIN_WATERMARK
+
+    @property
+    def total_mass_kg(self) -> float:
+        return self.empty_hull_mass_kg + (self.passenger_capacity * self.avg_passenger_mass_kg)
+
+    @property
+    def cross_sectional_area_m2(self) -> float:
+        radius_m = self.fuselage_diameter_m / 2.0
+        return math.pi * (radius_m ** 2)
+
+
+@dataclass
+class CorridorSpec:
+    """Evacuated guideway and floating-ladder parameters."""
+
+    corridor_name: str = "US Central-West-South Loop"
+    total_length_miles: float = 2600.0
+    cruise_speed_mph: float = 1220.0
+    turn_speed_mph: float = 400.0
+    major_turn_count: int = 6
+    turn_arc_length_miles: float = 8.0
+    tube_pressure_pa: float = 100.0
+    shell_material: str = "steel"
+    delta_temp_c: float = 45.0
+    ladder_actuator_stroke_mm: float = 80.0
+    origin: str = ORIGIN_WATERMARK
+
+    @property
+    def total_length_m(self) -> float:
+        return self.total_length_miles * MILE_TO_M
+
+    @property
+    def cruise_speed_mps(self) -> float:
+        return self.cruise_speed_mph * MPH_TO_MPS
+
+    @property
+    def turn_speed_mps(self) -> float:
+        return self.turn_speed_mph * MPH_TO_MPS
+
+
+@dataclass
+class FaultThresholds:
+    """Real-time deterministic telemetry limits."""
+
+    max_air_gap_deviation_mm: float = 1.50
+    max_lateral_offset_mm: float = 2.00
+    max_hts_coil_temp_k: float = 77.0
+    max_tube_pressure_pa: float = 500.0
+    max_acoustic_strain_microstrain: float = 450.0
+    origin: str = ORIGIN_WATERMARK
+
+
+class KinematicsEngine:
+    """Computes turn radii, speed-zoned arc transitions, and trip timing."""
+
+    @staticmethod
+    def turn_radius_miles(speed_mps: float, lateral_g: float) -> float:
+        if lateral_g <= 0.0:
+            raise ValueError("lateral_g must be positive")
+        return ((speed_mps ** 2) / (lateral_g * G_ACCEL)) / MILE_TO_M
+
+    def evaluate_corridor(self, capsule: CapsuleSpec, corridor: CorridorSpec) -> Dict[str, object]:
+        vc = corridor.cruise_speed_mps
+        vt = min(corridor.turn_speed_mps, vc)
+        a_long = capsule.max_comfort_long_g * G_ACCEL
+
+        t_ramp_one_way = vc / a_long
+        d_ramp_one_way = 0.5 * a_long * (t_ramp_one_way ** 2)
+        total_ramp_dist_m = 2.0 * d_ramp_one_way
+        total_ramp_time_s = 2.0 * t_ramp_one_way
+
+        t_shift = abs(vc - vt) / a_long
+        d_shift = abs(vc ** 2 - vt ** 2) / (2.0 * a_long)
+        d_arc_m = corridor.turn_arc_length_miles * MILE_TO_M
+        t_arc = d_arc_m / vt if vt > 0 else 0.0
+
+        turns_dist_m = corridor.major_turn_count * ((2.0 * d_shift) + d_arc_m)
+        turns_time_s = corridor.major_turn_count * ((2.0 * t_shift) + t_arc)
+
+        cruise_dist_m = corridor.total_length_m - total_ramp_dist_m - turns_dist_m
+        feasible = cruise_dist_m >= 0.0
+
+        if feasible:
+            cruise_time_s = cruise_dist_m / vc
+            total_hours = (total_ramp_time_s + turns_time_s + cruise_time_s) / 3600.0
+            avg_speed_mph = corridor.total_length_miles / total_hours if total_hours > 0 else 0.0
+        else:
+            total_hours = (total_ramp_time_s + turns_time_s) / 3600.0
+            avg_speed_mph = 0.0
+
+        return {
+            "origin": ORIGIN_WATERMARK,
+            "corridor_name": corridor.corridor_name,
+            "capsule_model": capsule.model_id,
+            "total_mass_kg": round(capsule.total_mass_kg, 1),
+            "feasible_profile": feasible,
+            "cruise_speed_mph": corridor.cruise_speed_mph,
+            "turn_speed_mph": corridor.turn_speed_mph,
+            "major_turn_count": corridor.major_turn_count,
+            "total_trip_hours": round(total_hours, 3),
+            "average_speed_mph": round(avg_speed_mph, 1),
+            "one_way_ramp_distance_miles": round(d_ramp_one_way / MILE_TO_M, 2),
+            "cruise_distance_miles": round(max(0.0, cruise_dist_m / MILE_TO_M), 2),
+            "turn_radii_miles": {
+                "cruise_unbanked_0_10g": round(self.turn_radius_miles(vc, capsule.max_unbanked_lat_g), 2),
+                "cruise_banked_0_25g": round(self.turn_radius_miles(vc, capsule.max_comfort_lat_g), 2),
+                "cruise_structural_1_50g": round(self.turn_radius_miles(vc, capsule.structural_lat_g_limit), 2),
+                "slow_turn_arc_0_25g": round(self.turn_radius_miles(vt, capsule.max_comfort_lat_g), 2),
+            },
+        }
+
+
+class LoopScheduler:
+    """Evaluates multi-leg U.S. loop terrain segments and no-get-off schedules."""
+
+    DEFAULT_LEGS: List[Tuple[str, float, str, List[Tuple[float, float, float]]]] = [
+        ("Chicago -> Denver", 1000.0, "Elevated plains pylon + Front Range rise", [(880.0, 1220.0, 1220.0), (120.0, 1220.0, 900.0)]),
+        ("Denver -> Salt Lake City", 500.0, "Continental Divide bored tunnels & mountain curves", [(100.0, 900.0, 550.0), (300.0, 550.0, 850.0), (100.0, 850.0, 550.0)]),
+        ("Salt Lake City -> Los Angeles", 700.0, "Great Basin, desert thermal zone & mountain pass", [(450.0, 550.0, 1100.0), (150.0, 1100.0, 500.0), (100.0, 500.0, 1000.0)]),
+        ("Los Angeles -> Phoenix", 375.0, "Desert pass & Sonoran basin", [(275.0, 1000.0, 1150.0), (100.0, 1150.0, 700.0)]),
+        ("Phoenix -> Dallas", 1060.0, "Desert-to-plains straightaways & escarpment", [(1060.0, 700.0, 1220.0)]),
+        ("Dallas -> St. Louis", 630.0, "Rolling hills, Ozark edge & river crossings", [(480.0, 1220.0, 1100.0), (150.0, 1100.0, 750.0)]),
+        ("St. Louis -> Chicago", 300.0, "Prairie straightaway into Chicago hub", [(300.0, 750.0, 1220.0)]),
+    ]
+
+    @staticmethod
+    def _chunk_time_s(dist_mi: float, v1_mph: float, v2_mph: float, a_mps2: float) -> float:
+        d_m = dist_mi * MILE_TO_M
+        if math.isclose(v1_mph, v2_mph):
+            v_mps = v1_mph * MPH_TO_MPS
+            return d_m / v_mps if v_mps > 0 else 0.0
+        v1_mps = v1_mph * MPH_TO_MPS
+        v2_mps = v2_mph * MPH_TO_MPS
+        d_trans_m = abs((v2_mps ** 2) - (v1_mps ** 2)) / (2.0 * a_mps2)
+        t_trans_s = abs(v2_mps - v1_mps) / a_mps2
+        if d_trans_m >= d_m:
+            v_avg_mps = 0.5 * (v1_mps + v2_mps)
+            return d_m / v_avg_mps if v_avg_mps > 0 else 0.0
+        return t_trans_s + ((d_m - d_trans_m) / v2_mps)
+
+    def evaluate_loop(self, comfort_g: float = 0.25, origin_turnaround_min: float = 15.0) -> Dict[str, object]:
+        a_mps2 = comfort_g * G_ACCEL
+        cum_s = 0.0
+        total_mi = 0.0
+        leg_reports: List[Dict[str, object]] = []
+
+        for leg_name, miles, terrain, chunks in self.DEFAULT_LEGS:
+            leg_s = sum(self._chunk_time_s(d, v1, v2, a_mps2) for d, v1, v2 in chunks)
+            cum_s += leg_s
+            total_mi += miles
+            leg_reports.append({
+                "leg": leg_name,
+                "miles": miles,
+                "terrain_and_juncture_notes": terrain,
+                "leg_hours": round(leg_s / 3600.0, 3),
+                "cumulative_hours": round(cum_s / 3600.0, 3),
+            })
+
+        active_hours = cum_s / 3600.0
+        no_get_off_roundtrip_hours = active_hours + (origin_turnaround_min / 60.0)
+        return {
+            "origin": ORIGIN_WATERMARK,
+            "total_loop_miles": total_mi,
+            "active_motion_hours": round(active_hours, 3),
+            "origin_turnaround_minutes": origin_turnaround_min,
+            "no_get_off_roundtrip_hours": round(no_get_off_roundtrip_hours, 3),
+            "max_loops_per_24h_single_capsule": round(24.0 / no_get_off_roundtrip_hours, 2) if no_get_off_roundtrip_hours > 0 else 0.0,
+            "legs": leg_reports,
+        }
+
+
+class FloatingLadderModel:
+    """Models thermal expansion and active ladder actuator margin."""
+
+    CTE_PER_K: Dict[str, float] = {
+        "steel": 1.2e-5,
+        "aluminum": 2.3e-5,
+        "carbon_composite": 0.3e-5,
+    }
+
+    def thermal_expansion_report(self, corridor: CorridorSpec) -> Dict[str, object]:
+        alpha = self.CTE_PER_K.get(corridor.shell_material.lower(), 1.2e-5)
+        delta_l_m = corridor.total_length_m * alpha * corridor.delta_temp_c
+        joint_spacing_m = 1000.0
+        num_joints = max(1, int(corridor.total_length_m // joint_spacing_m))
+        expansion_per_km_mm = (joint_spacing_m * alpha * corridor.delta_temp_c) * 1000.0
+        margin_mm = corridor.ladder_actuator_stroke_mm - expansion_per_km_mm
+        return {
+            "origin": ORIGIN_WATERMARK,
+            "material": corridor.shell_material,
+            "total_corridor_expansion_m": round(delta_l_m, 2),
+            "total_corridor_expansion_ft": round(delta_l_m * 3.28084, 1),
+            "expansion_joints_1km": num_joints,
+            "per_km_expansion_mm": round(expansion_per_km_mm, 2),
+            "actuator_stroke_mm": corridor.ladder_actuator_stroke_mm,
+            "per_km_actuator_margin_mm": round(margin_mm, 2),
+            "within_actuator_stroke": margin_mm >= 0.0,
+        }
+
+
+class FaultDetector:
+    """Deterministic telemetry evaluator for real-time fault handling."""
+
+    def __init__(self, thresholds: FaultThresholds | None = None) -> None:
+        self.thresholds = thresholds or FaultThresholds()
+
+    def evaluate_frame(self, telemetry: Dict[str, float]) -> Dict[str, object]:
+        air_gap_mm = telemetry.get("air_gap_mm", 65.0)
+        nominal_gap_mm = telemetry.get("nominal_air_gap_mm", 65.0)
+        lateral_offset_mm = telemetry.get("lateral_offset_mm", 0.0)
+        hts_temp_k = telemetry.get("hts_coil_temp_k", 45.0)
+        pressure_pa = telemetry.get("tube_pressure_pa", 100.0)
+        strain_us = telemetry.get("acoustic_strain_microstrain", 80.0)
+
+        gap_delta_mm = abs(air_gap_mm - nominal_gap_mm)
+        faults: List[str] = []
+        if gap_delta_mm > self.thresholds.max_air_gap_deviation_mm:
+            faults.append(f"AIR_GAP_DEVIATION ({gap_delta_mm:.2f} mm)")
+        if abs(lateral_offset_mm) > self.thresholds.max_lateral_offset_mm:
+            faults.append(f"LATERAL_LADDER_OFFSET ({abs(lateral_offset_mm):.2f} mm)")
+        if hts_temp_k > self.thresholds.max_hts_coil_temp_k:
+            faults.append(f"HTS_QUENCH_RISK ({hts_temp_k:.1f} K)")
+        if pressure_pa > self.thresholds.max_tube_pressure_pa:
+            faults.append(f"VACUUM_BREACH_RISK ({pressure_pa:.1f} Pa)")
+        if strain_us > self.thresholds.max_acoustic_strain_microstrain:
+            faults.append(f"STRUCTURAL_ACOUSTIC_SPIKE ({strain_us:.1f} uStrain)")
+
+        joined = " ".join(faults)
+        if len(faults) >= 2 or "HTS_QUENCH_RISK" in joined or "VACUUM_BREACH_RISK" in joined:
+            action = "DIVERT_MAGNETIC_DECEL_SIDING"
+        elif faults:
+            action = "TRIM_COIL_COMPENSATION_AND_THROTTLE"
+        else:
+            action = "NOMINAL_CRUISE"
+
+        return {
+            "origin": ORIGIN_WATERMARK,
+            "healthy": len(faults) == 0,
+            "recommended_action": action,
+            "faults": faults,
+        }
+
+
+class SystemTestHarness:
+    """Runs automated verification tests and telemetry benchmarks."""
+
+    def run_all_tests(self) -> Dict[str, object]:
+        capsule = CapsuleSpec()
+        corridor = CorridorSpec()
+        kin = KinematicsEngine()
+        loop_sched = LoopScheduler()
+        ladder = FloatingLadderModel()
+        detector = FaultDetector()
+
+        assert math.isclose(capsule.total_mass_kg, 10480.0, rel_tol=1e-9)
+        kin_report = kin.evaluate_corridor(capsule, corridor)
+        assert kin_report["feasible_profile"] is True
+
+        loop_report = loop_sched.evaluate_loop()
+        assert math.isclose(loop_report["total_loop_miles"], 4565.0, rel_tol=1e-9)
+        assert 4.0 <= loop_report["no_get_off_roundtrip_hours"] <= 5.5
+
+        ladder_report = ladder.thermal_expansion_report(corridor)
+        assert ladder_report["total_corridor_expansion_m"] > 0.0
+
+        assert detector.evaluate_frame({"air_gap_mm": 65.0})["healthy"] is True
+        assert detector.evaluate_frame({"hts_coil_temp_k": 92.0})["recommended_action"] == "DIVERT_MAGNETIC_DECEL_SIDING"
+
+        t0 = time.perf_counter()
+        latencies_us: List[float] = []
+        for i in range(1000):
+            f0 = time.perf_counter()
+            detector.evaluate_frame({"air_gap_mm": 65.0 + ((i % 5) - 2) * 0.2})
+            latencies_us.append((time.perf_counter() - f0) * 1e6)
+        elapsed_ms = (time.perf_counter() - t0) * 1e3
+
+        return {
+            "origin": ORIGIN_WATERMARK,
+            "tests_passed": 6,
+            "benchmark_1000_frames_ms": round(elapsed_ms, 3),
+            "median_frame_eval_us": round(statistics.median(latencies_us), 3),
+            "kinematics": kin_report,
+            "loop_schedule": loop_report,
+            "floating_ladder": ladder_report,
+        }
+
+
+def build_master_bundle() -> Dict[str, object]:
+    """Builds the full systems engineering JSON artifact."""
+    harness = SystemTestHarness()
+    return {
+        "schema_version": "2.0.0",
+        "origin": ORIGIN_WATERMARK,
+        "repository": REPO_SLUG,
+        "zenodo_doi": ZENODO_DOI,
+        "readme_markdown": README_MARKDOWN,
+        "capsule_spec": asdict(CapsuleSpec()),
+        "corridor_spec": asdict(CorridorSpec()),
+        "verification_and_benchmarks": harness.run_all_tests(),
+    }
+
+
+def main(argv: List[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description="Master Vactrain & Floating-Ladder Engineering Package")
+    parser.add_argument("--readme", action="store_true", help="Print embedded README specification and exit")
+    args = parser.parse_args(argv)
+    if args.readme:
+        print(README_MARKDOWN)
+        return 0
+    print(json.dumps(build_master_bundle(), indent=2))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
